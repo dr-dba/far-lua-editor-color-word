@@ -1,7 +1,7 @@
 --[[
 if 1 then return end --]]
 
---[[ 
+--[[
 Based on the @ZG code from:
 выделить все вхождения слова под курсором
 https://forum.farmanager.com/viewtopic.php?t=3733
@@ -20,8 +20,9 @@ local bad_expr, detect_mode
 
 local fnc_msg = function(msg_status, msg_title, msg_flags, msg_buttons)
 	far.Message(msg_status, msg_title, msg_buttons, msg_flags)
-	if msg_buttons == nil or msg_buttons == ""
-	then far.Timer(400, function(caller) far.AdvControl("ACTL_REDRAWALL"); caller:Close(); end) end
+	if	(msg_buttons or "") == ""
+	then	far.Timer(400, function(caller) far.AdvControl("ACTL_REDRAWALL"); caller:Close(); end)
+	end
 end
 
 Macro { description = "Highlight the selected quote",
@@ -32,29 +33,41 @@ Macro { description = "Highlight the selected quote",
 -- ###
 local edin = editor.GetInfo()
 local edid = edin.EditorID
-if 	quotes[edid]
+local value_selected = Editor.SelValue
+local value_to_color = quotes[edid]
+if 	value_to_color
+and	value_to_color ~= ""
+and (	value_selected == value_to_color
+or	value_selected == "")
 then
 	if	detect_mode == ""
+	or not	detect_mode
 	then	detect_mode  = "CaseIns"
 	elseif	detect_mode == "CaseIns"
+	then	detect_mode  = "CaseSen"
+	elseif	detect_mode == "CaseSen"
 	then	detect_mode  = "RegExpr"
 	elseif	detect_mode == "RegExpr"
 	then	quotes[edid] = nil
+		detect_mode  = nil
 	end
 else
-	local pos = edin.CurPos
-	local line = editor.GetString().StringText
-	local value_to_color = Editor.SelValue
-	if value_to_color == "" then
-		if pos <= line:len() + 1 then
-			local slab, tail
-			slab = pos > 1 and line:sub(1, pos - 1):match('[%w_]+$') or ""
-			tail = line:sub(pos):match('^[%w_]+') or ""
+	if	value_selected ~= ""
+	then
+		value_to_color = value_selected
+	else	-- no selection, take the current quote:
+		local	line= editor.GetString().StringText
+		local	pos = edin.CurPos
+		if	pos <= line:len() + 1
+		then
+			local slab = pos > 1 and line:sub(1, pos - 1):match('[%w_]+$') or ""
+			local tail = line:sub(pos):match('^[%w_]+') or ""
 			value_to_color = slab..tail
 		end
 	end
-	if value_to_color ~= "" then
-		detect_mode = "CaseIns"
+	if	value_to_color 
+	and	value_to_color ~= ""
+	then	detect_mode = "CaseIns"
 		quotes[edid] = value_to_color
 	end
 end
@@ -66,15 +79,16 @@ Event { description = "<file:> "..mf.replace(mf.fsplit((...), 4), "_", " ");
 	group = "EditorEvent",
 	action = function(edid, event, param)
 -- ###
-if	event == F.EE_CLOSE 
+if	event == F.EE_CLOSE
 then	quotes[edid] = nil
 	return
 end
-if	event ~= F.EE_REDRAW 
-or not	quotes[edid] 
+if	event ~= F.EE_REDRAW
+or not	quotes[edid]
 or	bad_expr
-then	return 
+then	return
 end
+
 local edin = editor.GetInfo(edid)
 local line_from = edin.TopScreenLine
 local line_last = math.min(edin.TopScreenLine + edin.WindowSizeY, edin.TotalLines)
@@ -86,7 +100,7 @@ do
 	line = editor.GetString(edid, ii_line).StringText
 	line_low = line:lower()
 	line_pos = 1
-	while true 
+	while true
 	do
 		got_quote = nil
 		quote_pos = nil
@@ -97,7 +111,8 @@ do
 		elseif	detect_mode == "RegExpr"
 		then	local res, msg = pcall(function()
 			quote_pos, quote_end, got_quote = line:cfind(the_quote, line_pos, false) end)
-			if not res then
+			if not res
+			then
 				bad_expr = true
 				mf.postmacro(fnc_msg, msg:gsub(":", "\n"), "incorrect expression: # "..the_quote.." #", "w", "OK")
 				break;
@@ -106,11 +121,13 @@ do
 		if not quote_pos then break; end
 		if not got_quote then got_quote = line:sub(quote_pos, quote_end) end
 		case_diff = got_quote ~= the_quote
-		editor.AddColor(edid, ii_line, quote_pos, quote_end, F.ECF_AUTODELETE,
-			{Flags = 3,
-			BackgroundColor = mf.iif(case_diff, bnot(color.BackgroundColor), color.ForegroundColor),
-			ForegroundColor = mf.iif(case_diff, bnot(color.ForegroundColor), color.BackgroundColor)
-				},
+		editor.AddColor(
+			edid, ii_line, quote_pos, quote_end, F.ECF_AUTODELETE,
+			{
+				Flags = 3,
+				BackgroundColor = case_diff and bnot(color.BackgroundColor) or color.ForegroundColor,
+				ForegroundColor = case_diff and bnot(color.ForegroundColor) or color.BackgroundColor,
+			},
 			100, colorguid)
 		line_pos = quote_pos + 1
 	end
