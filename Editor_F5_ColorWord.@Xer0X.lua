@@ -86,7 +86,8 @@ do
 	line = editor.GetString(edid, ii_line).StringText
 	line_low = line:lower()
 	line_pos = 1
-	while true do
+	while true 
+	do
 		got_quote = nil
 		quote_pos = nil
 		if 	detect_mode == "CaseSen"
