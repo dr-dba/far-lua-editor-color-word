@@ -10,11 +10,11 @@ https://forum.farmanager.com/viewtopic.php?t=3733
 @Xer0X mod (source) home:
 https://github.com/dr-dba/far-lua-editor-color-word
 
-есть три режима последовательно (по нажатию Ф5) включаемые:
+Eсть три режима последовательно (по нажатию Ф5) включаемые:
 1.) Простое выделение, НЕ-чувствительно к регистру
 2.) Чувствительное к регистру выделение, текст отличное регистром тоже выделяется, но другим цветом
-3.) Выделение по Луа-РегЕкспу, т.е. можно написать луа-рекексп в редакторе,
-и таким образом протестировать его в редакторе, что удобно
+3.) Выделение по Луа-РегЕкспу, т.е. можно написать луа-регексп в редакторе,
+и таким образом протестировать его в том же редакторе, что удобно
 
 TODO
 Сделать так чтобы редактор с последующими нажатиям AltF7/ShiftF7 искал этот текст (выделенный по F5)
@@ -82,10 +82,12 @@ else
 	end
 end
 bad_expr = false
+-- @@@
 	end
 }
 
 Event { description = "<file:> "..mf.replace(mf.fsplit((...), 4), "_", " ");
+	id = "B3E432CD-E0D4-4DBB-A36E-0E362C9154A1";
 	group = "EditorEvent",
 	action = function(edid, event, param)
 -- ###
@@ -98,7 +100,6 @@ or not	quotes[edid]
 or	bad_expr
 then	return
 end
-
 local edin = editor.GetInfo(edid)
 local line_from = edin.TopScreenLine
 local line_last = math.min(edin.TopScreenLine + edin.WindowSizeY, edin.TotalLines)
@@ -111,8 +112,7 @@ do
 	line_low = line:lower()
 	line_pos = 1
 	while true
-	do
-		got_quote = nil
+	do	got_quote = nil
 		quote_pos = nil
 		if 	detect_mode == "CaseSen"
 		then	quote_pos, quote_end = line:cfind(the_quote, line_pos, true)
@@ -146,3 +146,4 @@ end
 -- @@@
 	end;
 }
+-- @@@@@
