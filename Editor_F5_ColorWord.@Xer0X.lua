@@ -1,5 +1,19 @@
-﻿local F = far.Flags
+--[[
+if 1 then return end --]]
+
+--[[ 
+Based on the @ZG code from:
+выделить все вхождения слова под курсором
+https://forum.farmanager.com/viewtopic.php?t=3733
+%FarHome%\Addons\Macros\Editor.ColorWord.moon
+
+@Xer0X mod (source) home:
+https://github.com/dr-dba/far-lua-editor-color-word
+]]
+local F = far.Flags
 local color = far.AdvControl(F.ACTL_GETCOLOR, far.Colors.COL_EDITORTEXT)
+--[[ invert colors:
+color.ForegroundColor, color.BackgroundColor = color.BackgroundColor, color.ForegroundColor --]]
 local colorguid = win.Uuid("507CFA2A-3BA3-4f2b-8A80-318F5A831235")
 local quotes = { }
 local bad_expr, detect_mode
@@ -11,6 +25,7 @@ local fnc_msg = function(msg_status, msg_title, msg_flags, msg_buttons)
 end
 
 Macro { description = "Highlight the selected quote",
+	id = "D23057B8-868B-40A2-992D-4B8C21229D7B",
 	area = "Editor",
 	key = "F5",
 	action = function()
@@ -22,8 +37,6 @@ then
 	if	detect_mode == ""
 	then	detect_mode  = "CaseIns"
 	elseif	detect_mode == "CaseIns"
---!	then	detect_mode  = "CaseSen"
---!	elseif	detect_mode == "CaseSen"
 	then	detect_mode  = "RegExpr"
 	elseif	detect_mode == "RegExpr"
 	then	quotes[edid] = nil
@@ -33,7 +46,6 @@ else
 	local line = editor.GetString().StringText
 	local value_to_color = Editor.SelValue
 	if value_to_color == "" then
-	--!	no selection, take the current quote:
 		if pos <= line:len() + 1 then
 			local slab, tail
 			slab = pos > 1 and line:sub(1, pos - 1):match('[%w_]+$') or ""
@@ -47,7 +59,6 @@ else
 	end
 end
 bad_expr = false
--- @@@
 	end
 }
 
@@ -55,21 +66,23 @@ Event { description = "<file:> "..mf.replace(mf.fsplit((...), 4), "_", " ");
 	group = "EditorEvent",
 	action = function(edid, event, param)
 -- ###
-if event == F.EE_CLOSE then
-	quotes[edid] = nil
+if	event == F.EE_CLOSE 
+then	quotes[edid] = nil
 	return
 end
-if event ~= F.EE_REDRAW or not quotes[edid] or bad_expr
-then return end
-
+if	event ~= F.EE_REDRAW 
+or not	quotes[edid] 
+or	bad_expr
+then	return 
+end
 local edin = editor.GetInfo(edid)
 local line_from = edin.TopScreenLine
 local line_last = math.min(edin.TopScreenLine + edin.WindowSizeY, edin.TotalLines)
 local the_quote = quotes[edid]
 local the_quote_low = the_quote:lower()
 local line, line_low, line_pos, quote_pos, quote_end, got_quote, case_diff
-
-for ii_line = line_from, line_last do
+for ii_line = line_from, line_last
+do
 	line = editor.GetString(edid, ii_line).StringText
 	line_low = line:lower()
 	line_pos = 1
