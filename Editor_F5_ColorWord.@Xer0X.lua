@@ -48,30 +48,39 @@ local nfo = Info { _filename or ...,
 --	execute		= function(nfo, name) end;
 --	disabled	= true;
 	options		= { 
-		SHOW_REGEX_ERR = true
+		ACTION_KEY	= "F5",
+		SHOW_REGEX_ERR	= true,
+		QuoteColorFore	= 0x0,
+		QuoteColorBack	= 0xF,
 	};
 }
 
 -- @@@ END OF THE INFO BLOCK @@@
 
--- ### SETTINGS SECTION ###
-
-local SHOW_REGEX_ERR	= nfo.options.SHOW_REGEX_ERR
-
--- ### END OF SETTINGS SECTION ###
+-- ### CONSTANTS DECLARATION @@@
 
 if not Xer0X then Xer0X = { } end
+local opts = nfo.options
 local F = far.Flags
 local ACTL_GETCOLOR	= F.ACTL_GETCOLOR
 local EE_CLOSE		= F.EE_CLOSE
 local EE_REDRAW		= F.EE_REDRAW
 local ECF_AUTODELETE	= F.ECF_AUTODELETE
-local color = far.AdvControl(ACTL_GETCOLOR, far.Colors.COL_EDITORTEXT)
+local EDITOR_COLOR_TEXT = far.AdvControl(ACTL_GETCOLOR, far.Colors.COL_EDITORTEXT)
 --[[ invert colors:
 color.ForegroundColor, color.BackgroundColor = color.BackgroundColor, color.ForegroundColor --]]
-local colorguid = win.Uuid("507CFA2A-3BA3-4f2b-8A80-318F5A831235")
-local tbl_quotes = { }
+local QUOTE_COLOR_GUID = win.Uuid("507CFA2A-3BA3-4f2b-8A80-318F5A831235")
+
+-- @@@ END OF CONSTANTS DECLARATION @@@
+
+-- ### SETTINGS SECTION ###
+
+local SHOW_REGEX_ERR	= nfo.options.SHOW_REGEX_ERR
+
+-- @@@ END OF SETTINGS SECTION @@@
+
 local bad_expr, detect_mode
+local tbl_quotes = { }
 
 local function fnc_trans_msg(msg_status, msg_title, msg_flags, msg_buttons)
 	far.Message(msg_status, msg_title, msg_buttons, msg_flags)
@@ -132,17 +141,15 @@ do
 			edid, ii_line, inf_quote.val_char_pos, inf_quote.val_char_end, ECF_AUTODELETE,
 			{
 				Flags = 3,
-				BackgroundColor = 15,
-				ForegroundColor = 0,
+				BackgroundColor = opts.QuoteColorBack,
+				ForegroundColor = opts.QuoteColorFore,
 			},
 			100,
-			colorguid)
+			QUOTE_COLOR_GUID)
 	end
 	while true
 	do
-		
 		local	find_res, find_msg, quote_pos, quote_end, got_quote, case_diff
-		
 		if	detect_mode == "CaseInS"
 		or	detect_mode == "CaseSen"
 		then
@@ -169,11 +176,11 @@ do
 				edid, ii_line, quote_pos, quote_end, ECF_AUTODELETE,
 				{
 					Flags = 3,
-					BackgroundColor = case_diff and bnot(color.BackgroundColor) or color.ForegroundColor,
-					ForegroundColor = case_diff and bnot(color.ForegroundColor) or color.BackgroundColor,
+					BackgroundColor = case_diff and bnot(EDITOR_COLOR_TEXT.BackgroundColor) or EDITOR_COLOR_TEXT.ForegroundColor,
+					ForegroundColor = case_diff and bnot(EDITOR_COLOR_TEXT.ForegroundColor) or EDITOR_COLOR_TEXT.BackgroundColor,
 				},
 				100,
-				colorguid)
+				QUOTE_COLOR_GUID)
 		end
 		line_pos = quote_end + 1
 	end
@@ -190,7 +197,7 @@ end
 Macro { description = "Highlight the selected quote",
 	id = "D23057B8-868B-40A2-992D-4B8C21229D7B",
 	area = "Editor",
-	key = "F5",
+	key = opts.ACTION_KEY,
 	action = function()
 -- ###
 local edin = editor.GetInfo()
