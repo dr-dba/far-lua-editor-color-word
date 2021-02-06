@@ -182,9 +182,6 @@ then	inf_quote.CurPosChar = ed_cur_pos_char
 	inf_quote.CurPosLine = ed_cur_pos_line
 	ed_pos_chg = true
 end
-local	edin = editor.GetInfo(edid)
-local	line_from = edin.TopScreenLine
-local	line_last = math.min(edin.TopScreenLine + edin.WindowSizeY, edin.TotalLines)
 local	det_mode = detect_mode
 local	t_now = Far.UpTime
 if	ed_pos_chg
@@ -220,6 +217,9 @@ then	if	last_word_str
 end
 local	the_quote = inf_quote.val_to_color
 local	the_quote_low = the_quote:lower()
+local	edin = editor.GetInfo(edid)
+local	line_from = edin.TopScreenLine
+local	line_last = math.min(line_from + edin.WindowSizeY, edin.TotalLines)
 for ii_line = line_from, line_last
 do
 	local line = editor.GetString(edid, ii_line).StringText
@@ -235,7 +235,8 @@ do
 				ForegroundColor = opts.QuoteColorFore,
 			},
 			100,
-			QUOTE_COLOR_GUID)
+			QUOTE_COLOR_GUID
+				)
 	end
 	while true
 	do
@@ -264,7 +265,7 @@ do
 		if	ii_line	  ~= inf_quote.val_line_num
 		or	quote_pos ~= inf_quote.val_char_pos
 		or	quote_end ~= inf_quote.val_char_end
-		then 		editor.AddColor(
+		then 	editor.AddColor(
 				edid, ii_line, quote_pos, quote_end, ECF_AUTODELETE,
 				{
 					Flags = 3,
@@ -272,7 +273,8 @@ do
 					ForegroundColor = case_diff and bnot(EDITOR_COLOR_TEXT.ForegroundColor) or EDITOR_COLOR_TEXT.BackgroundColor,
 				},
 				100,
-				QUOTE_COLOR_GUID)
+				QUOTE_COLOR_GUID
+					)
 		end
 		line_pos = quote_end + 1
 	end
