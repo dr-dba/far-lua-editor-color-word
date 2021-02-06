@@ -47,9 +47,10 @@ local nfo = Info { _filename or ...,
 --	help		= function(nfo, name) end;
 --	execute		= function(nfo, name) end;
 --	disabled	= true;
-	options		= { 
+	options		= {
 		ACTION_KEY	= "F5",
 		SHOW_REGEX_ERR	= true,
+		HIGH_CURR_WORD	= true,
 		QuoteColorFore	= 0x0,
 		QuoteColorBack	= 0xF,
 	};
@@ -109,8 +110,37 @@ local function fnc_regex_check(expr)
 	end
 end
 
+local function fnc_current_word(line_str, char_pos)
+	
+	local	line = line_str or Editor.Value
+	local	pos  = char_pos or Editor.RealPos
+	if	pos <= line:len() + 1
+	then
+		local	slab = pos > 1 and line:sub(1, pos - 1):match('[%w_]+$') or ""
+		local	adj_tried
+		::with_adj_shift::
+		local	tail = line:sub(pos):match('^[%w_]+') or ""
+		local	value_to_color = slab..tail
+		if	value_to_color == ""
+		then	if not	adj_tried
+			then	pos = pos + 1
+				adj_tried = true
+				goto with_adj_shift
+			else	return
+			end
+		end
+		local value_pos = pos - slab:len()
+		local value_end = pos + tail:len() - 1
+		return value_to_color, Editor.CurLine, value_pos, value_end
+	end
+end
+
+local last_word_str, last_word_line, last_word_pos, last_word_end
+local t_curr_word_check = Far.UpTime
+
 Event { description = "<file:> "..mf.replace(mf.fsplit(..., 4), "_", " ");
 	id = "B3E432CD-E0D4-4DBB-A36E-0E362C9154A1";
+	condition = function() return not nfo.disabled end,
 	group = "EditorEvent",
 	action = function(edid, event, param)
 -- ###
@@ -118,29 +148,74 @@ if	event == EE_CLOSE
 then	tbl_quotes[edid] = nil
 	return
 end
-local	inf_quote
+local	inf_quote = tbl_quotes[edid]
+if not	inf_quote
+then	inf_quote = { }
+	tbl_quotes[edid] = inf_quote
+end
 if	event ~= EE_REDRAW
 or	detect_mode == "RegExpr"
 and	bad_expr
 then	return
-else	inf_quote = tbl_quotes[edid]
-	if not	inf_quote
-	or not	inf_quote.is_on
-	then	return
+elseif	inf_quote.is_on
+or	opts.HIGH_CURR_WORD
+then	-- go on
+else	return
+end
+local	ed_pos_chg
+local	ed_cur_pos_char = Editor.RealPos
+local	ed_cur_pos_line = Editor.CurLine
+if 	ed_cur_pos_char ~= inf_quote.CurPosChar
+or	ed_cur_pos_line ~= inf_quote.CurPosLine
+then	inf_quote.CurPosChar = ed_cur_pos_char
+	inf_quote.CurPosLine = ed_cur_pos_line
+	ed_pos_chg = true
+end
+local	edin = editor.GetInfo(edid)
+local	line_from = edin.TopScreenLine
+local	line_last = math.min(edin.TopScreenLine + edin.WindowSizeY, edin.TotalLines)
+local	det_mode = detect_mode
+local	t_now = Far.UpTime
+if	ed_pos_chg
+and not(ed_cur_pos_line == last_word_line
+and	ed_cur_pos_char >= last_word_pos
+and	ed_cur_pos_char <= last_word_end)
+then 	t_curr_word_check = t_now
+	local	curr_word_str,
+		curr_word_line,
+		curr_word_pos,
+		curr_word_end
+			= fnc_current_word(Editor.Value, ed_cur_pos_char)
+	if	curr_word_str
+	then	last_word_str	= curr_word_str
+		last_word_line	= curr_word_line
+		last_word_pos	= curr_word_pos
+		last_word_end	= curr_word_end
 	end
 end
-local edin = editor.GetInfo(edid)
-local line_from = edin.TopScreenLine
-local line_last = math.min(edin.TopScreenLine + edin.WindowSizeY, edin.TotalLines)
-local inf_quote = tbl_quotes[edid]
-local the_quote = inf_quote.val_to_color
-local the_quote_low = the_quote:lower()
+if not	inf_quote.is_on
+then	if	last_word_str
+	then	inf_quote = {
+			val_to_color = last_word_str,
+			val_line_num = last_word_line,
+			val_char_pos = last_word_pos,
+			val_char_end = last_word_end,
+			val_is_plain = true,
+			is_on = false
+		}
+		det_mode = "CaseInS"
+	else	return
+	end
+end
+local	the_quote = inf_quote.val_to_color
+local	the_quote_low = the_quote:lower()
 for ii_line = line_from, line_last
 do
 	local line = editor.GetString(edid, ii_line).StringText
 	local line_low = line:lower()
 	local line_pos = 1
-	if ii_line == inf_quote.val_line_num
+	if	inf_quote.val_line_num == ii_line
+	and	inf_quote.is_on
 	then 	editor.AddColor(
 			edid, ii_line, inf_quote.val_char_pos, inf_quote.val_char_end, ECF_AUTODELETE,
 			{
@@ -156,12 +231,12 @@ do
 		
 		local	find_res, find_msg, quote_pos, quote_end, got_quote, case_diff
 		
-		if	detect_mode == "CaseInS"
-		or	detect_mode == "CaseSen"
+		if	det_mode == "CaseInS"
+		or	det_mode == "CaseSen"
 		then
 			find_res, find_msg, quote_pos, quote_end, got_quote = fnc_cfind_safe(line_low, the_quote_low, line_pos, true)
 		elseif
-			detect_mode == "RegExpr"
+			det_mode == "RegExpr"
 		then
 			find_res, find_msg, quote_pos, quote_end, got_quote = fnc_cfind_safe(line, the_quote, line_pos, false)
 			if not	find_res
@@ -174,11 +249,11 @@ do
 		if not	got_quote
 		then	got_quote = line:sub(quote_pos, quote_end)
 		end
-		case_diff = detect_mode ~= "RegExpr" and got_quote ~= the_quote
+		case_diff = det_mode ~= "RegExpr" and got_quote ~= the_quote
 		if	ii_line	  ~= inf_quote.val_line_num
 		or	quote_pos ~= inf_quote.val_char_pos
 		or	quote_end ~= inf_quote.val_char_end
-		then 	editor.AddColor(
+		then 		editor.AddColor(
 				edid, ii_line, quote_pos, quote_end, ECF_AUTODELETE,
 				{
 					Flags = 3,
@@ -203,6 +278,7 @@ end
 Macro { description = "Highlight the selected quote",
 	id = "D23057B8-868B-40A2-992D-4B8C21229D7B",
 	area = "Editor",
+	condition = function() return not nfo.disabled end,
 	key = opts.ACTION_KEY,
 	action = function()
 -- ###
@@ -230,31 +306,14 @@ then
 		detect_mode = nil
 	end
 else
-	local value_pos, value_end
+	local value_line_num, value_line_pos, value_line_end
 	if	value_selected ~= ""
 	then	value_to_color = value_selected
 		local tbl_sel = editor.GetSelection(edid)
-		value_pos = tbl_sel.StartPos
-		value_end = tbl_sel.EndPos
+		value_line_pos = tbl_sel.StartPos
+		value_line_end = tbl_sel.EndPos
 	else	-- no selection, take the current quote:
-		local	line = editor.GetString().StringText
-		local	pos  = edin.CurPos
-		if	pos <= line:len() + 1
-		then
-			local	slab = pos > 1 and line:sub(1, pos - 1):match('[%w_]+$') or ""
-			local	adj_tried
-			::with_adj_shift::
-			local	tail = line:sub(pos):match('^[%w_]+') or ""
-			if	slab..tail == ""
-			and not adj_tried
-			then	pos = pos + 1
-				adj_tried = true
-				goto with_adj_shift
-			end
-			value_to_color = slab..tail
-			value_pos = pos - slab:len()
-			value_end = pos + tail:len()
-		end
+		value_to_color, value_line_num, value_line_pos, value_line_end = fnc_current_word()
 	end
 	if	value_to_color
 	and	value_to_color ~= ""
@@ -265,14 +324,15 @@ else
 		end
 		tbl_quotes[edid] = {
 			val_to_color = value_to_color,
-			val_line_num = edin.CurLine,
-			val_char_pos = value_pos,
-			val_char_end = value_pos + value_to_color:len() - 1,
+			val_line_num = value_line_num,
+			val_char_pos = value_line_pos,
+			val_char_end = value_line_pos + value_to_color:len() - 1,
 			val_is_plain = expr_is_plain,
 			val_expr_err = expr_err_msg,
 			is_on = true
 		}
 	elseif	inf_quote
+	and	inf_quote.value_to_color
 	and not inf_quote.is_on
 	then	inf_quote.is_on = true
 		detect_mode = "CaseInS"
