@@ -291,8 +291,8 @@ end
 Macro { description = "Highlight the selected quote",
 	id = "D23057B8-868B-40A2-992D-4B8C21229D7B",
 	area = "Editor",
-	condition = function() return not nfo.disabled end,
 	key = opts.ACTION_KEY,
+	condition = function() return not nfo.disabled end,
 	action = function()
 -- ###
 local edin = editor.GetInfo()
@@ -333,7 +333,12 @@ else
 	then	detect_mode = "CaseInS"
 		local expr_is_plain, expr_err_msg = fnc_regex_check(value_to_color)
 		if expr_is_plain and expr_err_msg
-		then mf.postmacro(fnc_trans_msg, expr_err_msg:gsub(":", "\n"), "incorrect expression: # "..value_to_color.." #", "w", SHOW_REGEX_ERR and "OK" or "")
+		then mf.postmacro(
+			fnc_trans_msg, 
+			expr_err_msg:gsub(":", "\n"), "incorrect expression: # "..value_to_color.." #", 
+			"w", 
+			SHOW_REGEX_ERR and "OK" or ""
+				)
 		end
 		tbl_quotes[edid] = {
 			val_to_color = value_to_color,
