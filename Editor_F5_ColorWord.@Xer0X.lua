@@ -259,17 +259,17 @@ else
 	if	value_to_color
 	and	value_to_color ~= ""
 	then	detect_mode = "CaseInS"
-		local res, msg = fnc_regex_check(value_to_color)
-		if res and msg
-		then mf.postmacro(fnc_trans_msg, msg:gsub(":", "\n"), "incorrect expression: # "..value_to_color.." #", "w", SHOW_REGEX_ERR and "OK" or "")
+		local expr_is_plain, expr_err_msg = fnc_regex_check(value_to_color)
+		if expr_is_plain and expr_err_msg
+		then mf.postmacro(fnc_trans_msg, expr_err_msg:gsub(":", "\n"), "incorrect expression: # "..value_to_color.." #", "w", SHOW_REGEX_ERR and "OK" or "")
 		end
 		tbl_quotes[edid] = {
 			val_to_color = value_to_color,
 			val_line_num = edin.CurLine,
 			val_char_pos = value_pos,
 			val_char_end = value_pos + value_to_color:len() - 1,
-			val_is_plain = res,
-			val_expr_err = msg,
+			val_is_plain = expr_is_plain,
+			val_expr_err = expr_err_msg,
 			is_on = true
 		}
 	elseif	inf_quote
