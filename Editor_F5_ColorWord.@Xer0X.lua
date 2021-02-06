@@ -75,7 +75,7 @@ local QUOTE_COLOR_GUID = win.Uuid("507CFA2A-3BA3-4f2b-8A80-318F5A831235")
 
 -- ### SETTINGS SECTION ###
 
-local SHOW_REGEX_ERR	= nfo.options.SHOW_REGEX_ERR
+local SHOW_REGEX_ERR	= opts.SHOW_REGEX_ERR
 
 -- @@@ END OF SETTINGS SECTION @@@
 
@@ -118,12 +118,16 @@ if	event == EE_CLOSE
 then	tbl_quotes[edid] = nil
 	return
 end
+local	inf_quote
 if	event ~= EE_REDRAW
-or not	tbl_quotes[edid]
-or not	tbl_quotes[edid].is_on
 or	detect_mode == "RegExpr"
 and	bad_expr
 then	return
+else	inf_quote = tbl_quotes[edid]
+	if not	inf_quote
+	or not	inf_quote.is_on
+	then	return
+	end
 end
 local edin = editor.GetInfo(edid)
 local line_from = edin.TopScreenLine
@@ -149,7 +153,9 @@ do
 	end
 	while true
 	do
+		
 		local	find_res, find_msg, quote_pos, quote_end, got_quote, case_diff
+		
 		if	detect_mode == "CaseInS"
 		or	detect_mode == "CaseSen"
 		then
