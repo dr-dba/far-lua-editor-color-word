@@ -62,7 +62,7 @@ local nfo = Info { _filename or ...,
 		ACTKEY_HiLi_QUOT = "F5",
 		ACTKEY_HiLi_AUTO = "CtrlF5",
 		USE_HiLi_CW_AUTO = true,
-		SHOW_REGEX_ERR	 = true,
+		SHOW_REGEX_ERROR = true,
 		QuoteColorFore	 = 0x0,
 		QuoteColorBack	 = 0xF,
 	};
@@ -82,14 +82,14 @@ local ECF_AUTODELETE	= F.ECF_AUTODELETE
 local EDITOR_COLOR_TEXT = far.AdvControl(ACTL_GETCOLOR, far.Colors.COL_EDITORTEXT)
 --[[ invert colors:
 color.ForegroundColor, color.BackgroundColor = color.BackgroundColor, color.ForegroundColor --]]
-local QUOTE_COLOR_GUID = win.Uuid("507CFA2A-3BA3-4f2b-8A80-318F5A831235")
-local HiLi_CW_AUTO_STATE = true
+local QUOTE_COLOR_GUID	= win.Uuid("507CFA2A-3BA3-4f2b-8A80-318F5A831235")
+local HiLi_CW_AUTO_STATE= true
 
 -- @@@ END OF CONSTANTS DECLARATION @@@
 
 -- ### SETTINGS SECTION ###
 
-local SHOW_REGEX_ERR	= opts.SHOW_REGEX_ERR
+local SHOW_REGEX_ERROR	= opts.SHOW_REGEX_ERROR
 
 -- @@@ END OF SETTINGS SECTION @@@
 
@@ -363,7 +363,7 @@ else
 			fnc_trans_msg,
 			expr_err_msg:gsub(":", "\n"), "incorrect expression: # "..value_to_color.." #",
 			"w",
-			SHOW_REGEX_ERR and "OK" or ""
+			SHOW_REGEX_ERROR and "OK" or ""
 				)
 		end
 		tbl_quotes[edid] = {
