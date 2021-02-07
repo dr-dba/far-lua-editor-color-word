@@ -26,9 +26,9 @@ https://github.com/dr-dba/far-lua-editor-color-word
 Это наподобие как по Ф5 (без регекспа), но автоматически.
 Так же как во всех адекватных IDE реализовано.
 Т.е., сейчас так:
-* Если мы в одном из режимов по Ф5, то игноруется текущее слово 
+* Если мы в одном из режимов по Ф5, то игноруется текущее слово
 	(если оно не является заданным по Ф5 конечно)
-* Если мы в без режима Ф5, т.е. в нормальном режиме, 
+* Если мы в без режима Ф5, т.е. в нормальном режиме,
 	то подсвечиваем все слова как то на котором стоим.
 
 Включено по умолчанию, отключается настройкой HIGH_CURR_WORD в скрипте
@@ -45,7 +45,7 @@ local nfo = Info { _filename or ...,
 	name		= "Editor_F5_ColorWord.@Xer0X.lua";
 	description	= "выделить все вхождения слова под курсором";
 	version		= "unknown";
-	version_mod	= "0.7";
+	version_mod	= "0.8";
 	author		= "ZG";
 	author_mod	= "Xer0X";
 	url		= "https://forum.farmanager.com/viewtopic.php?t=3733";
@@ -179,6 +179,7 @@ end
 local	ed_pos_chg
 local	ed_cur_pos_char = Editor.RealPos
 local	ed_cur_pos_line = Editor.CurLine
+local	ed_val_sel_str	= Editor.SelValue
 if 	ed_cur_pos_char ~= inf_quote.CurPosChar
 or	ed_cur_pos_line ~= inf_quote.CurPosLine
 then	inf_quote.CurPosChar = ed_cur_pos_char
@@ -191,17 +192,37 @@ if	ed_pos_chg
 and not(ed_cur_pos_line == last_word_line
 and	ed_cur_pos_char >= last_word_pos
 and	ed_cur_pos_char <= last_word_end)
+or	ed_val_sel_str ~= ""
+and(not last_word_sel
+or	last_word_str ~= ed_val_sel_str)
 then 	t_curr_word_check = t_now
 	local	curr_word_str,
 		curr_word_line,
 		curr_word_pos,
+		curr_word_end,
+		curr_word_sel
+	::early_editor_load_stage_selection_problem::
+	if	ed_val_sel_str	== ""
+	or not	ed_val_sel_str
+	then	curr_word_sel	= false
+		curr_word_str,
+		curr_word_line,
+		curr_word_pos,
 		curr_word_end
 			= fnc_current_word(Editor.Value, ed_cur_pos_char)
+	else    curr_word_sel	= true
+		local tbl_sel	= editor.GetSelection(edid)
+		curr_word_str	= ed_val_sel_str
+		curr_word_line	= ed_cur_pos_line
+		curr_word_pos	= tbl_sel.StartPos
+		curr_word_end	= tbl_sel.EndPos
+	end
 	if	curr_word_str
 	then	last_word_str	= curr_word_str
 		last_word_line	= curr_word_line
 		last_word_pos	= curr_word_pos
 		last_word_end	= curr_word_end
+		last_word_sel	= curr_word_sel
 	end
 end
 if not	inf_quote.is_on
@@ -211,6 +232,7 @@ then	if	last_word_str
 			val_line_num = last_word_line,
 			val_char_pos = last_word_pos,
 			val_char_end = last_word_end,
+			val_selected = last_word_sel,
 			val_is_plain = true,
 			is_on = false
 		}
@@ -218,9 +240,9 @@ then	if	last_word_str
 	else	return
 	end
 end
+local	edin = edin or editor.GetInfo(edid)
 local	the_quote = inf_quote.val_to_color
 local	the_quote_low = the_quote:lower()
-local	edin = editor.GetInfo(edid)
 local	line_from = edin.TopScreenLine
 local	line_last = math.min(line_from + edin.WindowSizeY, edin.TotalLines)
 for ii_line = line_from, line_last
@@ -323,11 +345,12 @@ then
 	end
 else
 	local value_line_num, value_line_pos, value_line_end
-	if	value_selected ~= ""
-	then	value_to_color = value_selected
-		local tbl_sel = editor.GetSelection(edid)
-		value_line_pos = tbl_sel.StartPos
-		value_line_end = tbl_sel.EndPos
+	if	value_selected
+	and	value_selected	~= ""
+	then	value_to_color	= value_selected
+		local tbl_sel	= editor.GetSelection(edid)
+		value_line_pos	= tbl_sel.StartPos
+		value_line_end	= tbl_sel.EndPos
 	else	-- no selection, take the current quote:
 		value_to_color, value_line_num, value_line_pos, value_line_end = fnc_current_word()
 	end
@@ -337,9 +360,9 @@ else
 		local expr_is_plain, expr_err_msg = fnc_regex_check(value_to_color)
 		if expr_is_plain and expr_err_msg
 		then mf.postmacro(
-			fnc_trans_msg, 
-			expr_err_msg:gsub(":", "\n"), "incorrect expression: # "..value_to_color.." #", 
-			"w", 
+			fnc_trans_msg,
+			expr_err_msg:gsub(":", "\n"), "incorrect expression: # "..value_to_color.." #",
+			"w",
 			SHOW_REGEX_ERR and "OK" or ""
 				)
 		end
