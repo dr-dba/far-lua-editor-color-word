@@ -59,11 +59,12 @@ local nfo = Info { _filename or ...,
 --	execute		= function(nfo, name) end;
 --	disabled	= true;
 	options		= {
-		ACTION_KEY	= "F5",
-		SHOW_REGEX_ERR	= true,
-		HIGH_CURR_WORD	= true,
-		QuoteColorFore	= 0x0,
-		QuoteColorBack	= 0xF,
+		ACTKEY_HiLi_QUOT = "F5",
+		ACTKEY_HiLi_AUTO = "CtrlF5",
+		USE_HiLi_CW_AUTO = true,
+		SHOW_REGEX_ERR	 = true,
+		QuoteColorFore	 = 0x0,
+		QuoteColorBack	 = 0xF,
 	};
 }
 
@@ -82,6 +83,7 @@ local EDITOR_COLOR_TEXT = far.AdvControl(ACTL_GETCOLOR, far.Colors.COL_EDITORTEX
 --[[ invert colors:
 color.ForegroundColor, color.BackgroundColor = color.BackgroundColor, color.ForegroundColor --]]
 local QUOTE_COLOR_GUID = win.Uuid("507CFA2A-3BA3-4f2b-8A80-318F5A831235")
+local HiLi_CW_AUTO_STATE = true
 
 -- @@@ END OF CONSTANTS DECLARATION @@@
 
@@ -169,7 +171,8 @@ or	detect_mode == "RegExpr"
 and	bad_expr
 then	return
 elseif	inf_quote.is_on
-or	opts.HIGH_CURR_WORD
+or	opts.USE_HiLi_CW_AUTO
+and	HiLi_CW_AUTO_STATE
 then	-- go on
 else	return
 end
@@ -291,7 +294,7 @@ end
 Macro { description = "Highlight the selected quote",
 	id = "D23057B8-868B-40A2-992D-4B8C21229D7B",
 	area = "Editor",
-	key = opts.ACTION_KEY,
+	key = opts.ACTKEY_HiLi_QUOT,
 	condition = function() return not nfo.disabled end,
 	action = function()
 -- ###
@@ -359,6 +362,14 @@ else
 end
 -- @@@
 	end
+}
+
+Macro { description = "Toggle current word highliting",
+	id = "3CF742E5-8C1E-4D94-B30F-959D727B6340",
+	area = "Editor",
+	key = opts.ACTKEY_HiLi_AUTO,
+	condition = function() return not nfo.disabled and opts.USE_HiLi_CW_AUTO end,
+	action = function() HiLi_CW_AUTO_STATE = not HiLi_CW_AUTO_STATE end
 }
 
 -- @@@@@
