@@ -31,7 +31,7 @@ https://github.com/dr-dba/far-lua-editor-color-word
 * Если мы в без режима Ф5, т.е. в нормальном режиме,
 	то подсвечиваем все слова как то на котором стоим.
 
-Включено по умолчанию, отключается настройкой HIGH_CURR_WORD в скрипте
+Включено по умолчанию, отключается настройкой USE_HiLi_CW_AUTO в скрипте
 
 TODO
 Сделать так чтобы редактор с последующими нажатиям AltF7/ShiftF7 искал этот текст (выделенный по F5)
@@ -45,7 +45,7 @@ local nfo = Info { _filename or ...,
 	name		= "Editor_F5_ColorWord.@Xer0X.lua";
 	description	= "выделить все вхождения слова под курсором";
 	version		= "unknown";
-	version_mod	= "0.8.3";
+	version_mod	= "0.8";
 	author		= "ZG";
 	author_mod	= "Xer0X";
 	url		= "https://forum.farmanager.com/viewtopic.php?t=3733";
@@ -129,16 +129,11 @@ local function fnc_current_word(line_str, char_pos)
 	then
 		local	slab = pos > 1 and line:sub(1, pos - 1):match('[%w_]+$') or ""
 		local	adj_tried
-		::with_adj_shift::
 		local	tail = line:sub(pos):match('^[%w_]+') or ""
 		local	value_to_color = slab..tail
 		if	value_to_color == ""
-		then	if not	adj_tried
-			then	pos = pos + 1
-				adj_tried = true
-				goto with_adj_shift
-			else	return
-			end
+		then	return
+		
 		end
 		local value_pos = pos - slab:len()
 		local value_end = pos + tail:len() - 1
@@ -223,8 +218,8 @@ or	inf_quote.last_word_str)
 then	return
 end
 local	edin = edin or editor.GetInfo(edid)
-local	det_mode	= inf_quote.is_on and inf_quote.detect_mode	or "CaseInS"
-local	the_quote	= inf_quote.is_on and inf_quote.val_to_color	or inf_quote.last_word_str
+local	det_mode	= inf_quote.is_on and inf_quote.detect_mode  or "CaseInS"
+local	the_quote	= inf_quote.is_on and inf_quote.val_to_color or inf_quote.last_word_str
 local	the_quote_low	= the_quote:lower()
 local	line_from	= edin.TopScreenLine
 local	line_last	= math.min(line_from + edin.WindowSizeY, edin.TotalLines)
