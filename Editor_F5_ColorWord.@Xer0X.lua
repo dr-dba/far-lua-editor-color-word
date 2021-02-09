@@ -45,7 +45,7 @@ local nfo = Info { _filename or ...,
 	name		= "Editor_F5_ColorWord.@Xer0X.lua";
 	description	= "выделить все вхождения слова под курсором";
 	version		= "unknown";
-	version_mod	= "0.8";
+	version_mod	= "0.8.3";
 	author		= "ZG";
 	author_mod	= "Xer0X";
 	url		= "https://forum.farmanager.com/viewtopic.php?t=3733";
@@ -301,9 +301,12 @@ local	value_selected  = Editor.SelValue
 local	inf_quote	= tbl_quotes[edid]
 if not	inf_quote
 then	inf_quote = { }
-	tbl_quotes[edid] = inf_quote
+	tbl_quotes[edid]= inf_quote
 end
-local	value_to_color	= inf_quote and inf_quote.is_on and inf_quote.val_to_color
+local	value_to_color	= 
+		inf_quote	and
+		inf_quote.is_on and	
+		inf_quote.val_to_color
 if 	value_to_color
 and	value_to_color ~= ""
 and (	value_selected == value_to_color
@@ -340,14 +343,15 @@ else
 	end
 	if	value_to_color
 	and	value_to_color ~= ""
-	then	local expr_is_plain, expr_err_msg = fnc_regex_check(value_to_color)
-		if expr_is_plain and expr_err_msg
-		then mf.postmacro(
-			fnc_trans_msg,
-			expr_err_msg:gsub(":", "\n"), "incorrect expression: # "..value_to_color.." #",
-			"w",
-			SHOW_REGEX_ERROR and "OK" or ""
-				)
+	then	local	expr_is_plain, expr_err_msg = fnc_regex_check(value_to_color)
+		if	expr_is_plain 
+		and	expr_err_msg
+		then	mf.postmacro(
+				fnc_trans_msg,
+				expr_err_msg:gsub(":", "\n"), "incorrect expression: # "..value_to_color.." #",
+				"w",
+				SHOW_REGEX_ERROR and "OK" or ""
+					)
 		end
 		inf_quote.detect_mode	= "CaseInS"
 		inf_quote.val_to_color	= value_to_color
