@@ -128,7 +128,6 @@ local function fnc_current_word(line_str, char_pos)
 	if	pos <= line:len() + 1
 	then
 		local	slab = pos > 1 and line:sub(1, pos - 1):match('[%w_]+$') or ""
-		local	adj_tried
 		local	tail = line:sub(pos):match('^[%w_]+') or ""
 		local	value_to_color = slab..tail
 		if	value_to_color == ""
@@ -206,11 +205,11 @@ then 	local	curr_word_str,
 	and (	curr_word_sel or
 		utf8.len(curr_word_str) > 1
 			)
-	then	inf_quote.last_word_str	= curr_word_str
+	then	inf_quote.last_word_sel	= curr_word_sel
+		inf_quote.last_word_str	= curr_word_str
 		inf_quote.last_word_line= curr_word_line
 		inf_quote.last_word_pos	= curr_word_pos
 		inf_quote.last_word_end	= curr_word_end
-		inf_quote.last_word_sel	= curr_word_sel
 	end
 end
 if not(	inf_quote.is_on
