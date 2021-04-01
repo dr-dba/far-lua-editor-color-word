@@ -38,14 +38,20 @@ local Info = package.loaded.regscript or function(...) return ... end
 local nfo = Info { _filename or ...,
 	name		= "Editor_F5_ColorWord.@Xer0X.lua";
 	description	= "выделить все вхождения слова под курсором";
-	version		= "unknown"; 
+	version		= "unknown"; -- http://semver.org/lang/ru/
 	version_mod	= "0.8.3";
 	author		= "ZG";
 	author_mod	= "Xer0X";
 	url		= "https://forum.farmanager.com/viewtopic.php?t=3733";
 	url_mod		= "https://github.com/dr-dba/far-lua-editor-color-word";
 	id		= "B86AA186-3F33-4929-894A-9AE5CDC5C1D1";
+--	parent_id	= "";
 	minfarversion	= { 3, 0, 0, 4744, 0 };
+--	files		= "*.cfg;*.ru.lng";
+--	config		= function(nfo, name) end;
+--	help		= function(nfo, name) end;
+--	execute		= function(nfo, name) end;
+--	disabled	= true;
 	options		= {
 		ACTKEY_HiLi_QUOT = "F5",
 		ACTKEY_HiLi_AUTO = "CtrlF5",
@@ -100,6 +106,7 @@ end
 
 local RAND_CHK_STR = utf8.upper(win.Uuid(win.Uuid()))
 local function fnc_regex_check(expr)
+-- is the "expr" plain text or valid regular expression?
 	local	str = RAND_CHK_STR..expr..RAND_CHK_STR
 	local	res, msg, found_pos, found_end, found_str = fnc_cfind_safe(str, expr)
 	if	res
@@ -129,7 +136,7 @@ Event { description = "<file:> "..mf.replace(mf.fsplit(..., 4), "_", " ");
 	condition = function() return not nfo.disabled end,
 	group = "EditorEvent",
 	action = function(edid, event, param)
-
+-- ###
 if	event == EE_CLOSE
 then	tbl_quotes[edid] = nil
 	return
@@ -146,7 +153,7 @@ then	return
 elseif	inf_quote.is_on
 or	opts.USE_HiLi_CW_AUTO
 and	HiLi_CW_AUTO_STATE
-then	
+then	-- go on
 else	return
 end
 local	ed_cur_pos_char = Editor.RealPos
@@ -277,7 +284,7 @@ do
 		line_pos = quote_end + 1
 	end
 end
-
+-- @@@
 	end;
 }
 
@@ -287,7 +294,7 @@ Macro { description = "Highlight the selected quote",
 	key = opts.ACTKEY_HiLi_QUOT,
 	condition = function() return not nfo.disabled end,
 	action = function()
-
+-- ###
 local	edin = editor.GetInfo()
 local	edid = edin.EditorID
 local	value_selected  = Editor.SelValue
@@ -327,7 +334,7 @@ else
 		value_line_num	= tbl_sel.StartLine
 		value_line_pos	= tbl_sel.StartPos
 		value_line_end	= tbl_sel.EndPos
-	else	
+	else	-- no selection, take the current quote:
 		value_to_color,
 		value_line_num,
 		value_line_pos,
@@ -361,7 +368,7 @@ else
 		inf_quote.detect_mode	= "CaseInS"
 	end
 end
-
+-- @@@
 	end
 }
 
@@ -372,3 +379,5 @@ Macro { description = "Toggle current word highliting",
 	condition = function() return not nfo.disabled end,
 	action = function() HiLi_CW_AUTO_STATE = not HiLi_CW_AUTO_STATE end
 }
+
+-- @@@@@
