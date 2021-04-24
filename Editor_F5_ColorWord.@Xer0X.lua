@@ -45,7 +45,7 @@ local nfo = Info { _filename or ...,
 	name		= "Editor_F5_ColorWord.@Xer0X.lua";
 	description	= "выделить все вхождения слова под курсором";
 	version		= "unknown"; -- http://semver.org/lang/ru/
-	version_mod	= "0.9.2";
+	version_mod	= "0.9.1";
 	author		= "ZG";
 	author_mod	= "Xer0X";
 	url		= "https://forum.farmanager.com/viewtopic.php?t=3733";
@@ -87,6 +87,9 @@ local EE_REDRAW		= F.EE_REDRAW
 local EE_SAVE           = F.EE_SAVE	
 local EE_READ		= F.EE_READ	
 local ECF_AUTODELETE	= F.ECF_AUTODELETE
+local BTYPE_NONE	= F.BTYPE_NONE
+local BTYPE_STREAM	= F.BTYPE_STREAM
+local BTYPE_COLUMN	= F.BTYPE_COLUMN
 
 local EDT_CLR_TXT	= far.AdvControl(ACTL_GETCOLOR, far.Colors.COL_EDITORTEXT)
 --[[ invert colors:
@@ -122,7 +125,6 @@ local function fnc_macro_key_run(key_inp)
 end
 
 local tmr_msg
-
 local function fnc_trans_msg(msg_status, msg_title, msg_flags, msg_buttons)
 	if	tmr_msg
 	and not	tmr_msg.Closed
@@ -165,6 +167,12 @@ local function fnc_trans_msg(msg_status, msg_title, msg_flags, msg_buttons)
 		fnc_msg_tmp(tmr_msg)
 		tmr_msg = far.Timer(100, fnc_msg_tmp)
 	end
+end
+
+local function fnc_inf_expr(inf_quote) return
+	inf_quote.is_on and	inf_quote.val_to_color or
+	USE_HiLi_CW_AUTO and	inf_quote.last_word_str or
+	nil
 end
 
 local function fnc_cfind_safe(line, the_quote, line_pos, plain)
@@ -295,7 +303,6 @@ local det_mode	=	inf_quote.is_on and inf_quote.detect_mode  or "CaseInS"
 local the_quote	=	inf_quote.is_on and inf_quote.val_to_color or inf_quote.last_word_str
 local line_num_home =	inf_quote.is_on and inf_quote.val_line_num or inf_quote.last_word_line
 local the_quote_low =	the_quote:lower()
-local char_from	=	char_pos_from or 1
 local line_wnd_beg =	edinf.TopScreenLine
 local line_wnd_end =	math.min(line_wnd_beg + edinf.WindowSizeY, edinf.TotalLines)
 local line_dir	=	line_find_dir or 1
@@ -306,6 +313,7 @@ for ii_line = line_from, line_last, line_dir
 do
 	local line = editor.GetString(ed_id, ii_line).StringText
 	local line_low = line:lower()
+	local char_from	= 1
 	local 	do_search
 	local	tbl_clr_line = inf_quote.clr_dat[ii_line]
 	if not	tbl_clr_line
@@ -315,7 +323,7 @@ do
 	end
 	while	do_search
 	do
-		local	find_res, find_msg, quote_pos, quote_end, quote_str, case_diff, is_orig_place
+		local find_res, find_msg, quote_pos, quote_end, quote_str, case_diff, is_orig_place
 		if	det_mode == "CaseInS"
 		or	det_mode == "CaseSen"
 		then
@@ -363,7 +371,11 @@ do
 		end
 		if	do_1st_res
 		then
-			local anchor_pos = ii_line == edinf.CurLine and edinf.CurPos or line_find_dir > 0 and 0 or (#line + 1)
+			local anchor_pos =
+				ii_line == edinf.CurLine and (char_pos_from or edinf.CurPos)
+				or line_find_dir > 0	and 0
+				or line_find_dir < 0	and (#line + 1)
+				or "BAD SITUATION !?"
 			if	line_find_dir > 0
 			then	for ii_clr = 1, #tbl_clr_line,  1 do if tbl_clr_line[ii_clr].beg > anchor_pos then found_clr = tbl_clr_line[ii_clr]; break end end
 			else	for ii_clr = #tbl_clr_line, 1, -1 do if tbl_clr_line[ii_clr].fin < anchor_pos then found_clr = tbl_clr_line[ii_clr]; break end end
@@ -381,6 +393,11 @@ do
 				if	editor.SetPosition(ed_id, ed_pos_new)
 				then	edinf.CurPos = ed_pos_new.CurPos or	edinf.CurPos
 					edinf.CurLine= ed_pos_new.CurLine or	edinf.CurLine
+					if edinf.BlockType ~= BTYPE_NONE
+					--[[ we always cancel existing selection
+					upon any initiated change of position ]]
+					then editor.Select(ed_id, { BlockType = BTYPE_NONE })
+					end
 				end
 				break
 			end
@@ -388,15 +405,10 @@ do
 			found_clr = tbl_clr_line[line_dir > 0 and #tbl_clr_line or 1]
 		end
 	end
-	--[[ for the next line always from the start or end,
-	"-1" interpreted as detect expression from the end to beginning]]
-	char_from = 1
 end -- of "for <each line>" loop
 return found_clr
 -- @@@
 end -- fnc_edit_curr_wind_hili_make
-
-local function fnc_inf_expr(inf_quote) return inf_quote.is_on and inf_quote.val_to_color or inf_quote.last_word_str end
 
 local function fnc_edit_curr_wind_hili(ed_id, edinf, inf_quote, ed_evt_num, ed_evt_arg)
 	local isNew,tPrv= fnc_edit_curr_wind_hili_info(ed_id, edinf, inf_quote, ed_evt_num, ed_evt_arg)
@@ -406,20 +418,6 @@ local function fnc_edit_curr_wind_hili(ed_id, edinf, inf_quote, ed_evt_num, ed_e
 	end
 	local found_clr = fnc_edit_curr_wind_hili_make(ed_id, edinf, inf_quote)
 end -- fnc_edit_curr_wind_hili
-
-local function fnc_edit_expr_find(ed_id, edinf, inf_quote, find_direction)
-	if not	inf_quote
-	or not( inf_quote.is_on
-	or 	inf_quote.last_word_str)
-	then return
-	end
-	inf_quote.in_search = true
-	local	find_dir = find_direction or 1
-	local	foundClr = fnc_edit_curr_wind_hili_make(ed_id, edinf, inf_quote, nil, nil, find_dir > 0 and edinf.TotalLines or 1, find_dir, false, true)
-	if not	foundClr
-	then	fnc_trans_msg(fnc_inf_expr(inf_quote), string.format("Not found %s:", find_dir > 0 and "NEXT" or "PREV"), "w", "")
-	end
-end -- fnc_edit_expr_find
 
 local function fnc_expr_proc(ed_id, edinf, force_status)
 -- ###
@@ -489,7 +487,7 @@ else	-- new value to color initialize
 		then	mf.postmacro(
 				fnc_trans_msg,
 				expr_err_msg:gsub(":", "\n"),
-				"incorrect expression: # "..value_to_color.." #",
+				"HighLighting incorrect expression: # "..value_to_color.." #",
 				"w",
 				SHOW_REGEX_ERROR and "OK" or ""
 					)
@@ -510,8 +508,43 @@ else	-- new value to color initialize
 		inf_quote.clr_dat	= { }
 	end
 end
+return inf_quote, ed_id, edinf
 -- @@@
-end -- fnc_expr_proc
+end -- fnc_expr_proc()
+
+local function fnc_edit_expr_find(ed_id, edinf, inf_quote, find_direction)
+	local	find_dir = find_direction or 1
+	local	char_pos, line_num
+	local	str_expr = fnc_inf_expr(inf_quote)
+	if not	str_expr
+	or	Editor.SelValue ~= ""
+	and	Editor.SelValue ~= str_expr
+	then	inf_quote = fnc_expr_proc(ed_id, edinf)
+		if not	fnc_inf_expr(inf_quote)
+		then	fnc_trans_msg("Nothing to search about", "HiLiting", "w", "")
+			return
+		else	if	inf_quote.is_on
+			and	find_dir < 0
+			and	edinf.BlockType > 0
+			and	inf_quote.val_line_num	== Editor.CurLine
+			and	inf_quote.val_char_end	== Editor.RealPos - 1
+			then	char_pos = inf_quote.val_char_pos
+			elseif	inf_quote.is_on
+			and	find_dir > 0
+			and	edinf.BlockType > 0
+			then	
+			end
+		end
+	end
+	inf_quote.in_search = true
+	local	foundClr = fnc_edit_curr_wind_hili_make(
+			ed_id, edinf, inf_quote, char_pos, line_num,
+			find_dir > 0 and edinf.TotalLines or 1, find_dir, false, true
+				)
+	if not	foundClr
+	then	fnc_trans_msg(fnc_inf_expr(inf_quote), string.format("HighLighting not found %s: ", find_dir > 0 and "NEXT" or "PREV"), "w", "")
+	end
+end -- fnc_edit_expr_find()
 
 Event { description = "[select quote:] editor events (CLOSE, REDRAW)",
 	id = "B3E432CD-E0D4-4DBB-A36E-0E362C9154A1";
@@ -580,12 +613,18 @@ Macro { description = "[select quote:] Toggle current word highliting",
 	key = ACTKEY_HiLi_AUTO,
 	condition = function() return not nfo.disabled end,
 	action = function()
-		local edinf = editor.GetInfo()
-		local inf_quote = tbl_quotes[edinf.EditorID]
-		USE_HiLi_CW_AUTO = not USE_HiLi_CW_AUTO or inf_quote.is_on
-		if	USE_HiLi_CW_AUTO
-		then	fnc_expr_proc(edinf.EditorID, edinf, "OFF")
-			far.AdvControl("ACTL_REDRAWALL")
+		local	edinf	=	editor.GetInfo()
+		local	inf_quote =	tbl_quotes[edinf.EditorID]
+		local	status_prev =	USE_HiLi_CW_AUTO
+		USE_HiLi_CW_AUTO = not	USE_HiLi_CW_AUTO or inf_quote.is_on
+		local	status_chg =	USE_HiLi_CW_AUTO ~= status_prev
+		if	status_chg
+		or	USE_HiLi_CW_AUTO
+		then	fnc_trans_msg("Auto HiLiting is "..(USE_HiLi_CW_AUTO and "ON" or "OFF"), "HighLighting", "", "")
+			if	USE_HiLi_CW_AUTO
+			then	fnc_expr_proc(edinf.EditorID, edinf, "OFF")
+				far.AdvControl("ACTL_REDRAWALL")
+			end
 		end
 	end
 }
