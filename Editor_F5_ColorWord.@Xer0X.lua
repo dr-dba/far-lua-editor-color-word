@@ -156,7 +156,7 @@ local function fnc_trans_msg(msg_status, msg_title, msg_flags, msg_buttons)
 					if	sz_vk ~= ""
 					then	local	ok_post, ret_msg = mf.postmacro(fnc_macro_key_run, sz_vk)
 						if not	ok_post
-						then	wopds("MSG postmacro problem: %s (%s, %s)", sz_vk, ok_post, ret_msg)
+						then
 						end
 					end
 					is_timeout = true
@@ -266,7 +266,7 @@ then
 					StartPos= f_pos,
 					EndPos	= f_end
 				}
-			else	fmsg("???")
+			else
 			end
 		end
 		curr_word_sel	= true
@@ -490,7 +490,7 @@ else	-- new value to color initialize
 		then	mf.postmacro(
 				fnc_trans_msg,
 				expr_err_msg:gsub(":", "\n"),
-				"HiLiting incorrect expression: # "..value_to_color.." #",
+				"HighLighting incorrect expression: # "..value_to_color.." #",
 				"w",
 				SHOW_REGEX_ERROR and "OK" or ""
 					)
@@ -547,7 +547,7 @@ local function fnc_edit_expr_find(ed_id, edinf, inf_quote, find_direction)
 				)
 	if	foundClr
 	then	cnt_find_moves = 1
-	else	fnc_trans_msg(fnc_inf_expr(inf_quote), string.format("HiLiting not found %s:", find_dir > 0 and "NEXT" or "PREV"), "w", "")
+	else	fnc_trans_msg(fnc_inf_expr(inf_quote), string.format("HighLighting not found %s: ", find_dir > 0 and "NEXT" or "PREV"), "w", "")
 	end
 end -- fnc_edit_expr_find()
 
@@ -625,7 +625,7 @@ Macro { description = "[select quote:] Toggle current word highliting",
 		local	status_chg =	USE_HiLi_CW_AUTO ~= status_prev
 		if	status_chg
 		or	USE_HiLi_CW_AUTO
-		then	fnc_trans_msg("Auto HiLiting is "..(USE_HiLi_CW_AUTO and "ON" or "OFF"), "HiLiting", "", "")
+		then	fnc_trans_msg("Auto HiLiting is "..(USE_HiLi_CW_AUTO and "ON" or "OFF"), "HighLighting", "", "")
 			if	USE_HiLi_CW_AUTO
 			then	fnc_expr_proc(edinf.EditorID, edinf, "OFF")
 				far.AdvControl("ACTL_REDRAWALL")
