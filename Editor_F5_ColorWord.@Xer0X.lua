@@ -212,6 +212,7 @@ local function fnc_curr_expr_hili(edid, edin, line_str, char_pos)
 	end
 end -- fnc_curr_expr_hili
 
+local cnt_find_moves = 0
 function fnc_edit_curr_wind_hili_info(edid, edin, inf_quote, ed_evt_num, ed_evt_arg)
 -- ###
 local	is_new, info_prev
@@ -222,10 +223,12 @@ local	ed_cur_str_text	= Editor.Value
 local	ed_pos_chg =
 		ed_cur_pos_char ~= inf_quote.CurPosChar or
 		ed_cur_pos_line ~= inf_quote.CurPosLine
-if	inf_quote.in_search
+if	inf_quote.in_search 
 then	if	ed_pos_chg
+	and	cnt_find_moves == 0
 	then	inf_quote.in_search = false
-	else	return false
+	else	cnt_find_moves = 0
+		return false
 	end
 end
 if 	ed_pos_chg
@@ -487,7 +490,7 @@ else	-- new value to color initialize
 		then	mf.postmacro(
 				fnc_trans_msg,
 				expr_err_msg:gsub(":", "\n"),
-				"HighLighting incorrect expression: # "..value_to_color.." #",
+				"HiLiting incorrect expression: # "..value_to_color.." #",
 				"w",
 				SHOW_REGEX_ERROR and "OK" or ""
 					)
@@ -542,8 +545,9 @@ local function fnc_edit_expr_find(ed_id, edinf, inf_quote, find_direction)
 			ed_id, edinf, inf_quote, char_pos, line_num,
 			find_dir > 0 and edinf.TotalLines or 1, find_dir, false, true
 				)
-	if not	foundClr
-	then	fnc_trans_msg(fnc_inf_expr(inf_quote), string.format("HighLighting not found %s: ", find_dir > 0 and "NEXT" or "PREV"), "w", "")
+	if	foundClr
+	then	cnt_find_moves = 1
+	else	fnc_trans_msg(fnc_inf_expr(inf_quote), string.format("HiLiting not found %s:", find_dir > 0 and "NEXT" or "PREV"), "w", "")
 	end
 end -- fnc_edit_expr_find()
 
@@ -621,7 +625,7 @@ Macro { description = "[select quote:] Toggle current word highliting",
 		local	status_chg =	USE_HiLi_CW_AUTO ~= status_prev
 		if	status_chg
 		or	USE_HiLi_CW_AUTO
-		then	fnc_trans_msg("Auto HiLiting is "..(USE_HiLi_CW_AUTO and "ON" or "OFF"), "HighLighting", "", "")
+		then	fnc_trans_msg("Auto HiLiting is "..(USE_HiLi_CW_AUTO and "ON" or "OFF"), "HiLiting", "", "")
 			if	USE_HiLi_CW_AUTO
 			then	fnc_expr_proc(edinf.EditorID, edinf, "OFF")
 				far.AdvControl("ACTL_REDRAWALL")
