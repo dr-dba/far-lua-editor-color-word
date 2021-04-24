@@ -528,11 +528,12 @@ local function fnc_edit_expr_find(ed_id, edinf, inf_quote, find_direction)
 			and	edinf.BlockType > 0
 			and	inf_quote.val_line_num	== Editor.CurLine
 			and	inf_quote.val_char_end	== Editor.RealPos - 1
-			then	char_pos = inf_quote.val_char_pos
+			then
+				char_pos = inf_quote.val_char_pos
 			elseif	inf_quote.is_on
 			and	find_dir > 0
 			and	edinf.BlockType > 0
-			then	
+			then
 			end
 		end
 	end
@@ -586,7 +587,7 @@ Macro { description = "[select quote:] HighLight",
 }
 
 Macro { description = "[select quote:] Go to the next",
-	id = "06505D40-EE3E-4DB6-B1CB-B3E8E7BB41FC",
+	id = "829B7D77-11EF-4AD3-8CB1-96FDABDFA0D2",
 	area = "Editor",
 	key = ACTKEY_NEXT_QUOT,
 	condition = function() return not nfo.disabled end,
