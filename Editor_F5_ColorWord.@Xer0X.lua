@@ -45,7 +45,7 @@ local nfo = Info { _filename or ...,
 	name		= "Editor_F5_ColorWord.@Xer0X.lua";
 	description	= "выделить все вхождения слова под курсором";
 	version		= "unknown"; -- http://semver.org/lang/ru/
-	version_mod	= "0.9.1";
+	version_mod	= "0.9.2";
 	author		= "ZG";
 	author_mod	= "Xer0X";
 	url		= "https://forum.farmanager.com/viewtopic.php?t=3733";
@@ -65,6 +65,7 @@ local nfo = Info { _filename or ...,
 		ACTKEY_HiLi_AUTO = "CtrlF5",
 		USE_HiLi_CW_AUTO = false,
 		SHOW_REGEX_ERROR = true,
+		MSG_SHOW_TIME_MS = 5000,
 		QuoteColorFore	 = 0x0,
 		QuoteColorBack	 = 0xF,
 	};
@@ -87,7 +88,7 @@ local EE_SAVE           = F.EE_SAVE
 local EE_READ		= F.EE_READ	
 local ECF_AUTODELETE	= F.ECF_AUTODELETE
 
-local EDITOR_COLOR_TEXT = far.AdvControl(ACTL_GETCOLOR, far.Colors.COL_EDITORTEXT)
+local EDT_CLR_TXT	= far.AdvControl(ACTL_GETCOLOR, far.Colors.COL_EDITORTEXT)
 --[[ invert colors:
 color.ForegroundColor, color.BackgroundColor = color.BackgroundColor, color.ForegroundColor --]]
 local QUOTE_COLOR_GUID	= win.Uuid("507CFA2A-3BA3-4f2b-8A80-318F5A831235")
@@ -96,6 +97,9 @@ local ACTKEY_HiLi_QUOT	= opts.ACTKEY_HiLi_QUOT
 local ACTKEY_PREV_QUOT	= opts.ACTKEY_PREV_QUOT
 local ACTKEY_NEXT_QUOT	= opts.ACTKEY_NEXT_QUOT
 local ACTKEY_HiLi_AUTO	= opts.ACTKEY_HiLi_AUTO
+local MSG_SHOW_TIME_MS	= opts.MSG_SHOW_TIME_MS
+local QuoteColorBack	= opts.QuoteColorBack
+local QuoteColorFore	= opts.QuoteColorFore
 
 -- @@@ END OF CONSTANTS DECLARATION @@@
 
@@ -105,13 +109,61 @@ local SHOW_REGEX_ERROR	= opts.SHOW_REGEX_ERROR
 
 -- @@@ END OF SETTINGS SECTION @@@
 local tbl_quotes = { }
-local stop_redraws
+
+local function fnc_macro_key_run(key_inp)
+	local	is_macro
+	local	ret_code = eval(key_inp, 2)
+	if	ret_code == -2
+	then	ret_code = Keys(key_inp)
+		is_macro = false
+	else	is_macro = true
+	end
+	return	ret_code, is_macro
+end
+
+local tmr_msg
+
 local function fnc_trans_msg(msg_status, msg_title, msg_flags, msg_buttons)
-	local is_transient = (msg_buttons or "") == ""
-	stop_redraws = is_transient
-	far.Message(msg_status, msg_title, msg_buttons, msg_flags)
-	if is_transient
-	then far.Timer(5000, function(caller) far.AdvControl("ACTL_REDRAWALL"); caller:Close(); stop_redraws = false end)
+	if	tmr_msg
+	and not	tmr_msg.Closed
+	then	tmr_msg:Close()
+		far.AdvControl("ACTL_REDRAWALL")
+	end
+	if	msg_status == "OFF"
+	and not msg_title
+	and not msg_flags
+	and not msg_buttons
+	then	return
+	end
+	local	is_transient = (msg_buttons or "") == ""
+	if	is_transient
+	then
+		local t1 = Far.UpTime
+		local function fnc_msg_tmp(caller)
+			far.Message(msg_status, msg_title, msg_buttons, msg_flags)
+			local is_timeout = Far.UpTime - t1 > MSG_SHOW_TIME_MS
+			::check_timeout::
+			if	caller
+			and not	caller.Closed
+			then	if	is_timeout
+				and not	caller.Closed
+				then	caller:Close()
+					far.AdvControl("ACTL_REDRAWALL")
+				else	caller.Enabled = false
+					local	sz_vk = mf.waitkey(MSG_SHOW_TIME_MS - 10)
+					if	sz_vk ~= ""
+					then	local	ok_post, ret_msg = mf.postmacro(fnc_macro_key_run, sz_vk)
+						if not	ok_post
+						then	wopds("MSG postmacro problem: %s (%s, %s)", sz_vk, ok_post, ret_msg)
+						end
+					end
+					is_timeout = true
+					goto check_timeout
+				end
+			end
+		end
+		fnc_msg_tmp(tmr_msg)
+		tmr_msg = far.Timer(100, fnc_msg_tmp)
 	end
 end
 
@@ -162,6 +214,12 @@ local	ed_cur_str_text	= Editor.Value
 local	ed_pos_chg =
 		ed_cur_pos_char ~= inf_quote.CurPosChar or
 		ed_cur_pos_line ~= inf_quote.CurPosLine
+if	inf_quote.in_search
+then	if	ed_pos_chg
+	then	inf_quote.in_search = false
+	else	return false
+	end
+end
 if 	ed_pos_chg
 then	inf_quote.CurPosChar = ed_cur_pos_char
 	inf_quote.CurPosLine = ed_cur_pos_line
@@ -248,19 +306,6 @@ for ii_line = line_from, line_last, line_dir
 do
 	local line = editor.GetString(ed_id, ii_line).StringText
 	local line_low = line:lower()
-	if	inf_quote.val_line_num == ii_line
-	and	inf_quote.is_on
-	then 	editor.AddColor(
-			ed_id, ii_line, inf_quote.val_char_pos, inf_quote.val_char_end, ECF_AUTODELETE,
-			{
-				Flags = 3,
-				BackgroundColor = opts.QuoteColorBack,
-				ForegroundColor = opts.QuoteColorFore,
-			},
-			100,
-			QUOTE_COLOR_GUID
-				)
-	end
 	local 	do_search
 	local	tbl_clr_line = inf_quote.clr_dat[ii_line]
 	if not	tbl_clr_line
@@ -270,7 +315,7 @@ do
 	end
 	while	do_search
 	do
-		local	find_res, find_msg, quote_pos, quote_end, quote_str, case_diff
+		local	find_res, find_msg, quote_pos, quote_end, quote_str, case_diff, is_orig_place
 		if	det_mode == "CaseInS"
 		or	det_mode == "CaseSen"
 		then
@@ -291,19 +336,19 @@ do
 		then	quote_str = line:sub(quote_pos, quote_end)
 		end
 		case_diff = det_mode ~= "RegExpr" and quote_str ~= the_quote
-		if	ii_line	  ~= inf_quote.val_line_num
-		or	quote_pos ~= inf_quote.val_char_pos
-		or	quote_end ~= inf_quote.val_char_end
-		then 	tbl_clr_line[#tbl_clr_line + 1] = {
-				beg	= quote_pos,
-				fin	= quote_end,
-				clr	= {
-					Flags = 3,
-					BackgroundColor = case_diff and bnot(EDITOR_COLOR_TEXT.BackgroundColor) or EDITOR_COLOR_TEXT.ForegroundColor,
-					ForegroundColor = case_diff and bnot(EDITOR_COLOR_TEXT.ForegroundColor) or EDITOR_COLOR_TEXT.BackgroundColor,
-				},
-			}
-		end
+		is_orig_place = inf_quote.is_on
+			and	inf_quote.val_line_num == ii_line
+			and	inf_quote.val_char_pos == quote_pos
+			and	inf_quote.val_char_end == quote_end
+		tbl_clr_line[#tbl_clr_line + 1] = {
+			beg	= quote_pos,
+			fin	= quote_end,
+			clr	= {
+				Flags = 3,
+				BackgroundColor = is_orig_place and QuoteColorBack or case_diff and bnot(EDT_CLR_TXT.BackgroundColor) or EDT_CLR_TXT.ForegroundColor,
+				ForegroundColor = is_orig_place and QuoteColorFore or case_diff and bnot(EDT_CLR_TXT.ForegroundColor) or EDT_CLR_TXT.BackgroundColor,
+			},
+		}
 		char_from = quote_end + 1
 	end -- of "while do_search" loop on single line
 	if	do_search
@@ -363,28 +408,16 @@ local function fnc_edit_curr_wind_hili(ed_id, edinf, inf_quote, ed_evt_num, ed_e
 end -- fnc_edit_curr_wind_hili
 
 local function fnc_edit_expr_find(ed_id, edinf, inf_quote, find_direction)
-	if not(	inf_quote.is_on
-	or	inf_quote.last_word_str)
+	if not	inf_quote
+	or not( inf_quote.is_on
+	or 	inf_quote.last_word_str)
 	then return
 	end
+	inf_quote.in_search = true
 	local	find_dir = find_direction or 1
 	local	foundClr = fnc_edit_curr_wind_hili_make(ed_id, edinf, inf_quote, nil, nil, find_dir > 0 and edinf.TotalLines or 1, find_dir, false, true)
-	if	foundClr
-	then	inf_quote.in_search = true
-		far.Timer(0, function(caller) caller:Close();
-			far.AdvControl("ACTL_REDRAWALL");
-			local	sz_vk = mf.waitkey()
-			if	sz_vk:match("^R?"..ACTKEY_NEXT_QUOT.."$")
-			or	sz_vk:match("^R?"..ACTKEY_PREV_QUOT.."$")
-			then
-			else	inf_quote.in_search = false
-			end
-			local	ok_post = mf.postmacro(eval, "Editor/"..sz_vk, 2)
-			if not	ok_post
-			then	fmsg(sz_vk, "postmacro problem:")
-			end
-		end)
-	else	mf.postmacro(fnc_trans_msg, fnc_inf_expr(inf_quote), "Not found:", "w", "")
+	if not	foundClr
+	then	fnc_trans_msg(fnc_inf_expr(inf_quote), string.format("Not found %s:", find_dir > 0 and "NEXT" or "PREV"), "w", "")
 	end
 end -- fnc_edit_expr_find
 
@@ -409,9 +442,10 @@ or	value_selected == "" )
 or	force_status
 then    -- pre-existing value to color, switch detect mode
 	if not	inf_quote.detect_mode
-	then	inf_quote.detect_mode = ""
+	or	inf_quote.detect_mode == ""
+	then	inf_quote.detect_mode = "OFF"
 	end
-	if	inf_quote.detect_mode == ""
+	if	inf_quote.detect_mode == "OFF"
 	and not force_status
 	or	force_status == "CaseInS"
 	then	inf_quote.detect_mode = "CaseInS"
@@ -427,7 +461,7 @@ then    -- pre-existing value to color, switch detect mode
 	and not force_status
 	or	force_status == "OFF"
 	then	
-		inf_quote.detect_mode = nil
+		inf_quote.detect_mode = "OFF"
 		inf_quote.is_on	=	false
 		inf_quote.clr_dat =	{ }
 	end
@@ -495,7 +529,6 @@ then	inf_quote = { clr_dat = { } }
 	tbl_quotes[ed_id] = inf_quote
 end
 if	event ~= EE_REDRAW
-or	stop_redraws
 or	inf_quote.detect_mode == "RegExpr"
 and	inf_quote.expr_err_msg
 then	return
@@ -550,7 +583,7 @@ Macro { description = "[select quote:] Toggle current word highliting",
 		local edinf = editor.GetInfo()
 		local inf_quote = tbl_quotes[edinf.EditorID]
 		USE_HiLi_CW_AUTO = not USE_HiLi_CW_AUTO or inf_quote.is_on
-		if USE_HiLi_CW_AUTO
+		if	USE_HiLi_CW_AUTO
 		then	fnc_expr_proc(edinf.EditorID, edinf, "OFF")
 			far.AdvControl("ACTL_REDRAWALL")
 		end
