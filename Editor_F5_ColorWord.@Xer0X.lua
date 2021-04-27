@@ -7,8 +7,11 @@ Based on the @ZG code from:
 https://forum.farmanager.com/viewtopic.php?t=3733
 %FarHome%\Addons\Macros\Editor.ColorWord.moon
 
-@Xer0X mod (source) home:
+@Xer0X mod home (source):
 https://github.com/dr-dba/far-lua-editor-color-word
+
+@Xer0X mod discussion page:
+https://forum.farmanager.com/viewtopic.php?t=12434
 
 Есть три режима последовательно (по нажатию F5) включаемые:
 1.) Простое выделение, НЕ-чувствительно к регистру
@@ -32,10 +35,6 @@ https://github.com/dr-dba/far-lua-editor-color-word
 	то подсвечиваем все слова как то на котором стоим.
 
 Включено по умолчанию, отключается настройкой USE_HiLi_CW_AUTO в скрипте
-
-TODO
-Сделать так чтобы редактор с последующими нажатиям AltF7/ShiftF7 искал этот текст (выделенный по F5)
-Принимаются предложения как это лучше сделать
 ]]
 
 -- ### INFO BLOCK ###
@@ -45,7 +44,7 @@ local nfo = Info { _filename or ...,
 	name		= "Editor_F5_ColorWord.@Xer0X.lua";
 	description	= "выделить все вхождения слова под курсором";
 	version		= "unknown"; -- http://semver.org/lang/ru/
-	version_mod	= "0.9.2";
+	version_mod	= "0.9.3";
 	author		= "ZG";
 	author_mod	= "Xer0X";
 	url		= "https://forum.farmanager.com/viewtopic.php?t=3733";
@@ -87,10 +86,21 @@ local EE_CLOSE		= F.EE_CLOSE
 local EE_REDRAW		= F.EE_REDRAW	
 local EE_SAVE           = F.EE_SAVE	
 local EE_READ		= F.EE_READ	
-local ECF_AUTODELETE	= F.ECF_AUTODELETE
 local BTYPE_NONE	= F.BTYPE_NONE
 local BTYPE_STREAM	= F.BTYPE_STREAM
 local BTYPE_COLUMN	= F.BTYPE_COLUMN
+
+local ECF_AUTODELETE	= F.ECF_AUTODELETE
+local FCF_NONE		= F.FCF_NONE		
+local FCF_FG_4BIT	= F.FCF_FG_4BIT		
+local FCF_4BITMASK	= F.FCF_4BITMASK	
+local FCF_BG_4BIT	= F.FCF_BG_4BIT		
+local FCF_RAWATTR_MASK	= F.FCF_RAWATTR_MASK	
+local FCF_EXTENDEDFLAGS = F.FCF_EXTENDEDFLAGS	
+local FCF_FG_BOLD	= F.FCF_FG_BOLD		
+local FCF_FG_ITALIC	= F.FCF_FG_ITALIC	
+local FCF_FG_UNDERLINE	= F.FCF_FG_UNDERLINE	
+local FCF_STYLEMASK	= F.FCF_STYLEMASK	
 
 local EDT_CLR_TXT	= far.AdvControl(ACTL_GETCOLOR, far.Colors.COL_EDITORTEXT)
 --[[ invert colors:
@@ -364,11 +374,9 @@ do
 		tbl_clr_line[#tbl_clr_line + 1] = {
 			beg	= quote_pos,
 			fin	= quote_end,
-			clr	= {
-				Flags = 3,
-				BackgroundColor = is_orig_place and QuoteColorBack or case_diff and bnot(EDT_CLR_TXT.BackgroundColor) or EDT_CLR_TXT.ForegroundColor,
-				ForegroundColor = is_orig_place and QuoteColorFore or case_diff and bnot(EDT_CLR_TXT.ForegroundColor) or EDT_CLR_TXT.BackgroundColor,
-			},
+				F = FCF_4BITMASK,
+				BGC = is_orig_place and QuoteColorBack or case_diff and bnot(EDT_CLR_TXT.BackgroundColor) or EDT_CLR_TXT.ForegroundColor,
+				FGC = is_orig_place and QuoteColorFore or case_diff and bnot(EDT_CLR_TXT.ForegroundColor) or EDT_CLR_TXT.BackgroundColor,
 		}
 		char_from = quote_end + 1
 	end -- of "while do_search" loop on single line
@@ -379,7 +387,7 @@ do
 	then
 		if	do_paint
 		then	for ii_clr, clr in pairs(tbl_clr_line)
-			do editor.AddColor(ed_id, ii_line, clr.beg, clr.fin, ECF_AUTODELETE, clr.clr, 100, QUOTE_COLOR_GUID)
+			do editor.AddColor(ed_id, ii_line, clr.beg, clr.fin, ECF_AUTODELETE, { Flags = clr.F, BackgroundColor = clr.BGC, ForegroundColor = clr.FGC }, 100, QUOTE_COLOR_GUID)
 			end
 		end
 		if	do_1st_res
