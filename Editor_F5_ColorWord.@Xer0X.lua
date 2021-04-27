@@ -49,7 +49,8 @@ local nfo = Info { _filename or ...,
 	author		= "ZG";
 	author_mod	= "Xer0X";
 	url		= "https://forum.farmanager.com/viewtopic.php?t=3733";
-	url_mod		= "https://github.com/dr-dba/far-lua-editor-color-word";
+	url_mod		= "https://forum.farmanager.com/viewtopic.php?t=12434";
+	url_github	= "https://github.com/dr-dba/far-lua-editor-color-word";
 	id		= "B86AA186-3F33-4929-894A-9AE5CDC5C1D1";
 --	parent_id	= "";
 	minfarversion	= { 3, 0, 0, 4744, 0 };
@@ -112,6 +113,7 @@ local SHOW_REGEX_ERROR	= opts.SHOW_REGEX_ERROR
 
 -- @@@ END OF SETTINGS SECTION @@@
 local tbl_quotes = { }
+local search_is_on, search_moved
 
 local function fnc_macro_key_run(key_inp)
 	local	is_macro
@@ -212,55 +214,63 @@ local function fnc_curr_expr_hili(edid, edin, line_str, char_pos)
 	end
 end -- fnc_curr_expr_hili
 
-local cnt_find_moves = 0
+local	ed_pos_char_cur = -1
+local	ed_pos_char_pre = -1
+local	ed_pos_line_cur = -1
+local	ed_pos_line_pre = -1
+local	ed_str_line_cur	= -1
+local	ed_str_line_pre	= -1
+
 function fnc_edit_curr_wind_hili_info(edid, edin, inf_quote, ed_evt_num, ed_evt_arg)
 -- ###
 local	is_new, info_prev
-local	ed_cur_pos_char = edin and edin.CurPos	or Editor.RealPos
-local	ed_cur_pos_line = edin and edin.CurLine or Editor.CurLine
-local	ed_val_sel_text	= Editor.SelValue
-local	ed_cur_str_text	= Editor.Value
-local	ed_pos_chg =
-		ed_cur_pos_char ~= inf_quote.CurPosChar or
-		ed_cur_pos_line ~= inf_quote.CurPosLine
-if	inf_quote.in_search 
-then	if	ed_pos_chg
-	and	cnt_find_moves == 0
-	then	inf_quote.in_search = false
-	else	cnt_find_moves = 0
-		return false
-	end
+ed_pos_char_pre = ed_pos_char_cur
+ed_pos_line_pre = ed_pos_line_cur
+ed_str_line_pre = ed_str_line_cur
+ed_pos_char_cur = edin and edin.CurPos	or Editor.RealPos
+ed_pos_line_cur = edin and edin.CurLine or Editor.CurLine
+ed_str_line_cur	= Editor.Value
+local	ed_sel_text_val	= Editor.SelValue
+local	ed_pos_chg =	ed_pos_char_cur ~= ed_pos_char_pre 
+		or	ed_pos_line_cur ~= ed_pos_line_pre 
+if	ed_pos_chg
+and	search_is_on
+and	search_moved
+then	search_moved = false
+	return false
 end
 if 	ed_pos_chg
-then	inf_quote.CurPosChar = ed_cur_pos_char
-	inf_quote.CurPosLine = ed_cur_pos_line
+then	search_is_on = false
+	search_moved = false
+	inf_quote.CurPosChar = ed_pos_char_cur
+	inf_quote.CurPosLine = ed_pos_line_cur
 end
 if	ed_pos_chg 
-and not(ed_cur_pos_line == inf_quote.last_word_line
-and	ed_cur_pos_char >= inf_quote.last_word_pos
-and	ed_cur_pos_char <= inf_quote.last_word_end)
-or	ed_val_sel_text ~= ""
+and not(ed_pos_line_cur == inf_quote.last_word_line
+and	ed_pos_char_cur >= inf_quote.last_word_pos
+and	ed_pos_char_cur <= inf_quote.last_word_end)
+or	ed_sel_text_val ~= ""
 and(not inf_quote.last_word_sel
-or	inf_quote.last_word_str ~= ed_val_sel_text)
+or	inf_quote.last_word_str ~= ed_sel_text_val)
 then
 	local	curr_word_str,
 		curr_word_line,
 		curr_word_pos,
 		curr_word_end,
 		curr_word_sel
-	if	ed_val_sel_text	== ""
-	or not	ed_val_sel_text
+	if	ed_sel_text_val	== ""
+	or not	ed_sel_text_val
 	then	-- no selection, work on current word
 		curr_word_sel	= false
 		curr_word_str,
 		curr_word_line,
 		curr_word_pos,
 		curr_word_end
-			= fnc_curr_expr_hili(edid, edin, ed_cur_str_text, ed_cur_pos_char)
+			= fnc_curr_expr_hili(edid, edin, ed_str_line_cur, ed_pos_char_cur)
 	else    -- work on current selection
 		local	tbl_sel	= editor.GetSelection(edid)
 		if not	tbl_sel
-		then	local	f_res, f_msg, f_pos, f_end = fnc_cfind_safe(ed_cur_str_text, ed_cur_str_text, 1, true)
+		then	local	f_res, f_msg, f_pos, f_end = fnc_cfind_safe(ed_str_line_cur, ed_str_line_cur, 1, true)
 			if	f_pos
 			then	tbl_sel = {
 					StartPos= f_pos,
@@ -270,8 +280,8 @@ then
 			end
 		end
 		curr_word_sel	= true
-		curr_word_str	= ed_val_sel_text
-		curr_word_line	= ed_cur_pos_line
+		curr_word_str	= ed_sel_text_val
+		curr_word_line	= ed_pos_line_cur
 		curr_word_pos	= tbl_sel.StartPos
 		curr_word_end	= tbl_sel.EndPos
 	end
@@ -463,11 +473,13 @@ then    -- pre-existing value to color, switch detect mode
 	or	force_status == "OFF"
 	then	
 		inf_quote.detect_mode = "OFF"
-		inf_quote.is_on	=	false
+		inf_quote.is_on =	false
 		inf_quote.clr_dat =	{ }
 	end
 else	-- new value to color initialize
-	local value_line_num, value_line_pos, value_line_end
+	local 	value_line_num,
+		value_line_pos,
+		value_line_end
 	if	value_selected
 	and	value_selected	~= ""
 	then	value_to_color	= value_selected
@@ -490,7 +502,7 @@ else	-- new value to color initialize
 		then	mf.postmacro(
 				fnc_trans_msg,
 				expr_err_msg:gsub(":", "\n"),
-				"HighLighting incorrect expression: # "..value_to_color.." #",
+				"HiLiting incorrect expression: # "..value_to_color.." #",
 				"w",
 				SHOW_REGEX_ERROR and "OK" or ""
 					)
@@ -540,14 +552,15 @@ local function fnc_edit_expr_find(ed_id, edinf, inf_quote, find_direction)
 			end
 		end
 	end
-	inf_quote.in_search = true
+	search_is_on = true
 	local	foundClr = fnc_edit_curr_wind_hili_make(
 			ed_id, edinf, inf_quote, char_pos, line_num,
 			find_dir > 0 and edinf.TotalLines or 1, find_dir, false, true
 				)
 	if	foundClr
-	then	cnt_find_moves = 1
-	else	fnc_trans_msg(fnc_inf_expr(inf_quote), string.format("HighLighting not found %s: ", find_dir > 0 and "NEXT" or "PREV"), "w", "")
+	then
+		search_moved = true
+	else	fnc_trans_msg(fnc_inf_expr(inf_quote), string.format("HiLiting not found %s: ", find_dir > 0 and "NEXT" or "PREV"), "w", "")
 	end
 end -- fnc_edit_expr_find()
 
@@ -612,7 +625,7 @@ Macro { description = "[select quote:] Go to the prev",
 	end
 }
 
-Macro { description = "[select quote:] Toggle current word highliting",
+Macro { description = "[select quote:] Toggle current word highlighting",
 	id = "3CF742E5-8C1E-4D94-B30F-959D727B6340",
 	area = "Editor",
 	key = ACTKEY_HiLi_AUTO,
@@ -625,7 +638,7 @@ Macro { description = "[select quote:] Toggle current word highliting",
 		local	status_chg =	USE_HiLi_CW_AUTO ~= status_prev
 		if	status_chg
 		or	USE_HiLi_CW_AUTO
-		then	fnc_trans_msg("Auto HiLiting is "..(USE_HiLi_CW_AUTO and "ON" or "OFF"), "HighLighting", "", "")
+		then	fnc_trans_msg("Auto HiLiting is "..(USE_HiLi_CW_AUTO and "ON" or "OFF"), "HiLiting", "", "")
 			if	USE_HiLi_CW_AUTO
 			then	fnc_expr_proc(edinf.EditorID, edinf, "OFF")
 				far.AdvControl("ACTL_REDRAWALL")
