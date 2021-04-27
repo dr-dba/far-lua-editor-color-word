@@ -4,7 +4,7 @@ Based on the @ZG code from:<br />
 выделить все вхождения слова под курсором<br />
 https://forum.farmanager.com/viewtopic.php?t=3733<br />
 %FarHome%\Addons\Macros\Editor.ColorWord.moon<br />
-<br /><br />
+<br />
 @Xer0X mod (source) home:<br />
 https://github.com/dr-dba/far-lua-editor-color-word<br />
 Discussion page:<br />
