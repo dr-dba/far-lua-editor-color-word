@@ -7,7 +7,7 @@ https://forum.farmanager.com/viewtopic.php?t=3733<br />
 <br /><br />
 @Xer0X mod (source) home:<br />
 https://github.com/dr-dba/far-lua-editor-color-word<br />
-Discussion page:
+Discussion page:<br />
 https://forum.farmanager.com/viewtopic.php?f=15&t=12434<br />
 <br />
 Eсть три режима последовательно (по нажатию Ф5) включаемые:<br />
