@@ -44,7 +44,7 @@ local nfo = Info { _filename or ...,
 	name		= "Editor_F5_ColorWord.@Xer0X.lua";
 	description	= "выделить все вхождения слова под курсором";
 	version		= "unknown"; -- http://semver.org/lang/ru/
-	version_mod	= "0.9.3";
+	version_mod	= "0.9.4";
 	author		= "ZG";
 	author_mod	= "Xer0X";
 	url		= "https://forum.farmanager.com/viewtopic.php?t=3733";
@@ -181,20 +181,20 @@ local function fnc_trans_msg(msg_status, msg_title, msg_flags, msg_buttons)
 	end
 end
 
-local function fnc_inf_expr(inf_quote) return
-	inf_quote.is_on and	inf_quote.val_to_color or
-	USE_HiLi_CW_AUTO and	inf_quote.last_word_str or
-	nil
+local function fnc_inf_expr(inf_quote) 
+	return	inf_quote.is_on and	inf_quote.val_to_color 
+	or	USE_HiLi_CW_AUTO and	inf_quote.last_word_str 
+	or	nil
 end
 
-local function fnc_cfind_safe(line, the_quote, line_pos, plain)
-	local	res, quote_pos, quote_end, quote_str
-			= pcall(utf8.cfind, line, the_quote, line_pos, plain)
-	return	res,
-	not	res and quote_pos or nil,
-		res and quote_pos or nil,
-		quote_end, quote_str
-end
+local function fnc_cfind_safe(str, expr, line_pos, plain)
+	local res, pos, fin, fnd = pcall(utf8.cfind, str, expr, line_pos, plain)
+	return	res, 
+		not res and pos or nil, 
+		res and pos or nil, 
+		res and fin or nil, 
+		res and fnd or nil
+end 
 
 local RAND_CHK_STR = utf8.upper(win.Uuid(win.Uuid()))
 local function fnc_regex_check(expr)
@@ -202,8 +202,11 @@ local function fnc_regex_check(expr)
 	local	str = RAND_CHK_STR..expr..RAND_CHK_STR
 	local	res, msg, found_pos, found_end, found_str = fnc_cfind_safe(str, expr)
 	if	res
-	then	return not found_str 
-	else	return true, msg
+	then	return	not found_str 
+			and found_pos 
+			and found_pos > 0 
+			and expr == utf8.sub(str, found_pos, found_end)
+	else	return false, msg
 	end
 end
 
@@ -504,16 +507,17 @@ else	-- new value to color initialize
 	end
 	if	value_to_color
 	and	value_to_color ~= ""
-	then	local	expr_is_plain, expr_err_msg = fnc_regex_check(value_to_color)
-		if	expr_is_plain
+	then	local expr_is_plain, expr_err_msg = fnc_regex_check(value_to_color)
+		if not	expr_is_plain
 		and	expr_err_msg
-		then	mf.postmacro(
-				fnc_trans_msg,
+		then	if SHOW_REGEX_ERROR 
+			then fnc_trans_msg(
 				expr_err_msg:gsub(":", "\n"),
 				"HiLiting incorrect expression: # "..value_to_color.." #",
-				"w",
-				SHOW_REGEX_ERROR and "OK" or ""
+				"w", ""
 					)
+			end
+			expr_is_plain = true
 		end
 		inf_quote.detect_mode	= "CaseInS"
 		inf_quote.is_on		= true
