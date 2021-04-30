@@ -44,7 +44,7 @@ local nfo = Info { _filename or ...,
 	name		= "Editor_F5_ColorWord.@Xer0X.lua";
 	description	= "выделить все вхождения слова под курсором";
 	version		= "unknown"; -- http://semver.org/lang/ru/
-	version_mod	= "0.9.4";
+	version_mod	= "0.9.5";
 	author		= "ZG";
 	author_mod	= "Xer0X";
 	url		= "https://forum.farmanager.com/viewtopic.php?t=3733";
@@ -123,60 +123,9 @@ local SHOW_REGEX_ERROR	= opts.SHOW_REGEX_ERROR
 
 -- @@@ END OF SETTINGS SECTION @@@
 local tbl_quotes = { }
+
 local search_is_on, search_moved
-
-local function fnc_macro_key_run(key_inp)
-	local	is_macro
-	local	ret_code = eval(key_inp, 2)
-	if	ret_code == -2
-	then	ret_code = Keys(key_inp)
-		is_macro = false
-	else	is_macro = true
-	end
-	return	ret_code, is_macro
-end
-
-local tmr_msg
-local function fnc_trans_msg(msg_status, msg_title, msg_flags, msg_buttons)
-	if	tmr_msg
-	and not	tmr_msg.Closed
-	then	tmr_msg:Close()
-		far.AdvControl("ACTL_REDRAWALL")
-	end
-	if	msg_status == "OFF"
-	and not msg_title
-	and not msg_flags
-	and not msg_buttons
-	then	return
-	end
-	local	is_transient = (msg_buttons or "") == ""
-	if	is_transient
-	then
-		local t1 = Far.UpTime
-		local function fnc_msg_tmp(caller)
-			far.Message(msg_status, msg_title, msg_buttons, msg_flags)
-			local is_timeout = Far.UpTime - t1 > MSG_SHOW_TIME_MS
-			::check_timeout::
-			if	caller
-			and not	caller.Closed
-			then	if	is_timeout
-				and not	caller.Closed
-				then	caller:Close()
-					far.AdvControl("ACTL_REDRAWALL")
-				else	caller.Enabled = false
-					local	sz_vk = mf.waitkey(MSG_SHOW_TIME_MS - 10)
-					if	sz_vk ~= ""
-					then	local ok_post, ret_msg = mf.postmacro(fnc_macro_key_run, sz_vk)
-					end
-					is_timeout = true
-					goto check_timeout
-				end
-			end
-		end
-		fnc_msg_tmp(tmr_msg)
-		tmr_msg = far.Timer(100, fnc_msg_tmp)
-	end
-end
+local fnc_trans_msg = Xer0X.fnc_trans_msg
 
 local function fnc_inf_expr(inf_quote)
 	return	inf_quote.is_on  and inf_quote.val_to_color
@@ -287,7 +236,6 @@ then
 					StartPos= f_pos,
 					EndPos	= f_end
 				}
-			else
 			end
 		end
 		curr_word_sel	= true
@@ -360,7 +308,7 @@ do
 			since "false" for "find_res" means bad expression,
 			which should be checked beforehand in the F5 proc.]]
 			then	if	SHOW_REGEX_ERROR
-				then	fnc_trans_msg(find_msg:gsub(":", "\n"), "HilLite incorrect expression: # "..the_quote.." #", "w", "")
+				then	fnc_trans_msg(find_msg:gsub(":", "\n"), "HiLite incorrect expression: # "..the_quote.." #", "w", "", true)
 					break
 				else	fnc_expr_proc(ed_id, edinf, "CaseInS")
 				end
@@ -451,13 +399,14 @@ ed_id = ed_id or edinf.EditorID
 local	value_selected  = Editor.SelValue
 local	inf_quote	= tbl_quotes[ed_id]
 if not	inf_quote
-then	inf_quote = { }
+then	inf_quote = { detect_mode = "OFF" }
 	tbl_quotes[ed_id]= inf_quote
 end
 local	value_to_color	=
 		inf_quote	and
 		inf_quote.is_on and
 		inf_quote.val_to_color
+local	det_mode_prev = inf_quote.detect_mode or "OFF"
 if 	value_to_color
 and	value_to_color ~= ""
 and (	value_selected == value_to_color
@@ -520,7 +469,7 @@ else	-- new value to color initialize
 			then fnc_trans_msg(
 				expr_err_msg:gsub(":", "\n"),
 				"HiLiting incorrect expression: # "..value_to_color.." #",
-				"w", ""
+				"w", "", true
 					)
 			end
 			expr_is_plain = true
@@ -541,6 +490,9 @@ else	-- new value to color initialize
 		inf_quote.clr_dat	= { }
 	end
 end
+if det_mode_prev ~= inf_quote.detect_mode
+then fnc_trans_msg(string.format("\n### %s ###\n\n%s ==>> %s", value_to_color, det_mode_prev, inf_quote.detect_mode), "HiLite detection mode", "", "", true)
+end
 return inf_quote, ed_id, edinf
 -- @@@
 end -- fnc_expr_proc()
@@ -554,7 +506,7 @@ local function fnc_edit_expr_find(ed_id, edinf, inf_quote, find_direction)
 	and	Editor.SelValue ~= str_expr
 	then	inf_quote = fnc_expr_proc(ed_id, edinf)
 		if not	fnc_inf_expr(inf_quote)
-		then	fnc_trans_msg("Nothing to search about", "HiLiting", "w", "")
+		then	fnc_trans_msg("Nothing to search about", "HiLiting", "w", "", true)
 			return
 		else	if	inf_quote.is_on
 			and	find_dir < 0
@@ -578,7 +530,7 @@ local function fnc_edit_expr_find(ed_id, edinf, inf_quote, find_direction)
 	if	foundClr
 	then
 		search_moved = true
-	else	fnc_trans_msg(fnc_inf_expr(inf_quote), string.format("HiLiting not found %s: ", find_dir > 0 and "NEXT" or "PREV"), "w", "")
+	else	fnc_trans_msg(fnc_inf_expr(inf_quote), string.format("HiLiting not found %s: ", find_dir > 0 and "NEXT" or "PREV"), "w", "", true)
 	end
 end -- fnc_edit_expr_find()
 
@@ -656,7 +608,7 @@ Macro { description = "[select quote:] Toggle current word highlighting",
 		local	status_chg =	USE_HiLi_CW_AUTO ~= status_prev
 		if	status_chg
 		or	USE_HiLi_CW_AUTO
-		then	fnc_trans_msg("Auto HiLiting is "..(USE_HiLi_CW_AUTO and "ON" or "OFF"), "HiLiting", "", "")
+		then	fnc_trans_msg("Auto HiLiting is "..(USE_HiLi_CW_AUTO and "ON" or "OFF"), "HiLiting", "", "", true)
 			if	USE_HiLi_CW_AUTO
 			then	fnc_expr_proc(edinf.EditorID, edinf, "OFF")
 				far.AdvControl("ACTL_REDRAWALL")
