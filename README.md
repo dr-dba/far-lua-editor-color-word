@@ -10,6 +10,11 @@ https://github.com/dr-dba/far-lua-editor-color-word<br />
 Discussion page:<br />
 https://forum.farmanager.com/viewtopic.php?f=15&t=12434<br />
 <br />
+DEPENDS ON MODULES:<br />
+https://github.com/dr-dba/far-lua-general-utils<br />
+https://github.com/dr-dba/far-lua-diagnostics<br />
+https://github.com/dr-dba/far-lua-internals<br />
+<br />
 Eсть три режима последовательно (по нажатию Ф5) включаемые:<br />
 1.) Простое выделение, НЕ-чувствительно к регистру<br />
 2.) Чувствительное к регистру выделение, текст отличное регистром тоже выделяется, но другим цветом<br />
@@ -35,8 +40,6 @@ Eсть три режима последовательно (по нажатию 
 	(если оно не является заданнум по Ф5 конечно)<br />
 * Если мы в без режима Ф5, т.е. в нормальном режиме,<br />
 	то подсвечиваем все слова как то на которм стоим.<br />
-<br />
-Включено по умолчанию, отключается настройкой HIGH_CURR_WORD в скрипте<br />
 <br />
 2020/04/24<br />
 * CtrlF5 теперь сразу переводит в режим "автовыделения", отменяя до этого выделенное по Ф5<br />
