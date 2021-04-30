@@ -166,10 +166,7 @@ local function fnc_trans_msg(msg_status, msg_title, msg_flags, msg_buttons)
 				else	caller.Enabled = false
 					local	sz_vk = mf.waitkey(MSG_SHOW_TIME_MS - 10)
 					if	sz_vk ~= ""
-					then	local	ok_post, ret_msg = mf.postmacro(fnc_macro_key_run, sz_vk)
-						if not	ok_post
-						then
-						end
+					then	local ok_post, ret_msg = mf.postmacro(fnc_macro_key_run, sz_vk)
 					end
 					is_timeout = true
 					goto check_timeout
@@ -181,34 +178,35 @@ local function fnc_trans_msg(msg_status, msg_title, msg_flags, msg_buttons)
 	end
 end
 
-local function fnc_inf_expr(inf_quote) 
-	return	inf_quote.is_on and	inf_quote.val_to_color 
-	or	USE_HiLi_CW_AUTO and	inf_quote.last_word_str 
+local function fnc_inf_expr(inf_quote)
+	return	inf_quote.is_on  and inf_quote.val_to_color
+	or	USE_HiLi_CW_AUTO and inf_quote.last_word_str
 	or	nil
 end
-
-local function fnc_cfind_safe(str, expr, line_pos, plain)
-	local res, pos, fin, fnd = pcall(utf8.cfind, str, expr, line_pos, plain)
-	return	res, 
-		not res and pos or nil, 
-		res and pos or nil, 
-		res and fin or nil, 
+local function fnc_cfind_safe(str, expr, line_pos, is_plain)
+	local res, pos, fin, fnd = pcall(utf8.cfind, str, expr, line_pos, is_plain)
+	return	res,
+		not res and pos or nil,
+		res and pos or nil,
+		res and fin or nil,
 		res and fnd or nil
-end 
+end
 
 local RAND_CHK_STR = utf8.upper(win.Uuid(win.Uuid()))
 local function fnc_regex_check(expr)
 -- is the "expr" plain text or valid regular expression?
 	local	str = RAND_CHK_STR..expr..RAND_CHK_STR
-	local	res, msg, found_pos, found_end, found_str = fnc_cfind_safe(str, expr)
+	local	res, msg, found_pos, found_end, found_str = fnc_cfind_safe(str, expr, nil, false)
 	if	res
-	then	return	not found_str 
-			and found_pos 
-			and found_pos > 0 
+	then	local is_plain =
+			not found_str
+			and found_pos
+			and found_pos > 0
 			and expr == utf8.sub(str, found_pos, found_end)
+		return is_plain
 	else	return false, msg
 	end
-end
+end -- fnc_regex_check
 
 local function fnc_curr_expr_hili(edid, edin, line_str, char_pos)
 	local	line = line_str or Editor.Value
@@ -361,8 +359,11 @@ do
 			if not find_res --[[ should not be here,
 			since "false" for "find_res" means bad expression,
 			which should be checked beforehand in the F5 proc.]]
-			then	mf.postmacro(fnc_trans_msg, find_msg:gsub(":", "\n"), "(Ooops!?) incorrect expression: # "..the_quote.." #", "w", "OK")
-				break
+			then	if	SHOW_REGEX_ERROR
+				then	fnc_trans_msg(find_msg:gsub(":", "\n"), "HilLite incorrect expression: # "..the_quote.." #", "w", "")
+					break
+				else	fnc_expr_proc(ed_id, edinf, "CaseInS")
+				end
 			end --]]
 		end
 		if not	quote_pos then break end
@@ -467,19 +468,24 @@ then    -- pre-existing value to color, switch detect mode
 	or	inf_quote.detect_mode == ""
 	then	inf_quote.detect_mode = "OFF"
 	end
+	if	inf_quote.val_is_plain
+	and	inf_quote.detect_mode =="CaseInS"
+	then	-- only to jump over the unapplicable RegExpr mode:
+		inf_quote.detect_mode = "RegExpr"
+	end
 	if	inf_quote.detect_mode == "OFF"
+	and not force_status
+	or	force_status == "CaseSen"
+	then	inf_quote.detect_mode = "CaseSen"
+	elseif	inf_quote.detect_mode =="CaseSen"
 	and not force_status
 	or	force_status == "CaseInS"
 	then	inf_quote.detect_mode = "CaseInS"
-	elseif	inf_quote.detect_mode == "CaseInS"
+	elseif	inf_quote.detect_mode =="CaseInS"
 	and not force_status
 	or	force_status == "RegExpr"
-	then	if	inf_quote.val_is_plain
-		then	inf_quote.is_on = false
-			inf_quote.detect_mode = nil
-		else	inf_quote.detect_mode = "RegExpr"
-		end
-	elseif	inf_quote.detect_mode == "RegExpr"
+	then	inf_quote.detect_mode = "RegExpr"
+	elseif	inf_quote.detect_mode =="RegExpr"
 	and not force_status
 	or	force_status == "OFF"
 	then	
@@ -510,7 +516,7 @@ else	-- new value to color initialize
 	then	local expr_is_plain, expr_err_msg = fnc_regex_check(value_to_color)
 		if not	expr_is_plain
 		and	expr_err_msg
-		then	if SHOW_REGEX_ERROR 
+		then	if SHOW_REGEX_ERROR
 			then fnc_trans_msg(
 				expr_err_msg:gsub(":", "\n"),
 				"HiLiting incorrect expression: # "..value_to_color.." #",
