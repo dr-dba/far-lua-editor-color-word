@@ -13,6 +13,11 @@ https://github.com/dr-dba/far-lua-editor-color-word
 @Xer0X mod discussion page:
 https://forum.farmanager.com/viewtopic.php?t=12434
 
+DEPENDS ON MODULES:
+https://github.com/dr-dba/far-lua-general-utils
+https://github.com/dr-dba/far-lua-diagnostics
+https://github.com/dr-dba/far-lua-internals
+
 Есть три режима последовательно (по нажатию F5) включаемые:
 1.) Простое выделение, НЕ-чувствительно к регистру
 2.) Чувствительное к регистру выделение, текст отличное регистром тоже выделяется, но другим цветом
@@ -132,6 +137,7 @@ local function fnc_inf_expr(inf_quote)
 	or	USE_HiLi_CW_AUTO and inf_quote.last_word_str
 	or	nil
 end
+
 local function fnc_cfind_safe(str, expr, line_pos, is_plain)
 	local res, pos, fin, fnd = pcall(utf8.cfind, str, expr, line_pos, is_plain)
 	return	res,
