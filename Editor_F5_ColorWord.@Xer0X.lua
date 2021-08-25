@@ -49,7 +49,7 @@ local nfo = Info { _filename or ...,
 	name		= "Editor_F5_ColorWord.@Xer0X.lua";
 	description	= "выделить все вхождения слова под курсором";
 	version		= "unknown"; -- http://semver.org/lang/ru/
-	version_mod	= "0.9.5";
+	version_mod	= "0.9.6";
 	author		= "ZG";
 	author_mod	= "Xer0X";
 	url		= "https://forum.farmanager.com/viewtopic.php?t=3733";
@@ -71,8 +71,8 @@ local nfo = Info { _filename or ...,
 		USE_HiLi_CW_AUTO = false,
 		SHOW_REGEX_ERROR = true,
 		MSG_SHOW_TIME_MS = 5000,
-		QuoteColorFore	 = 0x0,
-		QuoteColorBack	 = 0xF,
+		QuoteColorFore	 = 0xFF000000,
+		QuoteColorBack	 = 0xFF00000F,
 	};
 }
 
