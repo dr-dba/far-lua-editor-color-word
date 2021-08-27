@@ -14,9 +14,15 @@ https://github.com/dr-dba/far-lua-editor-color-word
 https://forum.farmanager.com/viewtopic.php?t=12434
 
 DEPENDS ON MODULES:
+
 https://github.com/dr-dba/far-lua-general-utils
+Lib-Common-@Xer0X.Lua
+
 https://github.com/dr-dba/far-lua-diagnostics
+
 https://github.com/dr-dba/far-lua-internals
+
+------------------------------------------------------------------------------
 
 Есть три режима последовательно (по нажатию F5) включаемые:
 1.) Простое выделение, НЕ-чувствительно к регистру
@@ -78,7 +84,7 @@ local nfo = Info { _filename or ...,
 
 -- @@@ END OF THE INFO BLOCK @@@
 
--- ### CONSTANTS DECLARATION @@@
+-- ### CONSTANTS DECLARATION ###
 
 if not Xer0X then Xer0X = { } end
 local opts = nfo.options
@@ -127,6 +133,14 @@ local QuoteColorFore	= opts.QuoteColorFore
 local SHOW_REGEX_ERROR	= opts.SHOW_REGEX_ERROR
 
 -- @@@ END OF SETTINGS SECTION @@@
+
+-- ### HELPING OBJECTS SECTION ###
+
+local Xer0X = require("Lib-Common-@Xer0X")
+local fnc_cfind_safe = Xer0X.fnc_cfind_safe
+
+-- @@@ END OF HELPING OBJECTS  @@@
+
 local tbl_quotes = { }
 
 local search_is_on, search_moved
@@ -136,15 +150,6 @@ local function fnc_inf_expr(inf_quote)
 	return	inf_quote.is_on  and inf_quote.val_to_color
 	or	USE_HiLi_CW_AUTO and inf_quote.last_word_str
 	or	nil
-end
-
-local function fnc_cfind_safe(str, expr, line_pos, is_plain)
-	local res, pos, fin, fnd = pcall(utf8.cfind, str, expr, line_pos, is_plain)
-	return	res,
-		not res and pos or nil,
-		res and pos or nil,
-		res and fin or nil,
-		res and fnd or nil
 end
 
 local RAND_CHK_STR = utf8.upper(win.Uuid(win.Uuid()))
